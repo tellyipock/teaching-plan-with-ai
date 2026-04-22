@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, FileText, ChevronLeft, Info } from 'lucide-react';
 import { RubricForm, RubricFormData } from '@/components/RubricForm';
@@ -11,12 +11,16 @@ import { exportRubricToPDF } from '@/lib/pdf-export';
 import { useRubricStore, SavedRubric } from '@/lib/store';
 import { Toaster, toast } from 'sonner';
 export function HomePage() {
+  const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<'form' | 'loading' | 'result'>('form');
   const [isGenerating, setIsGenerating] = useState(false);
   const [rubricData, setRubricData] = useState<RubricRow[]>([]);
   const [formData, setFormData] = useState<RubricFormData | null>(null);
   const saveRubric = useRubricStore(s => s.saveRubric);
   const clearCurrent = useRubricStore(s => s.clearCurrent);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const handleGenerate = useCallback(async (data: RubricFormData) => {
     setFormData(data);
     setView('loading');
@@ -37,13 +41,16 @@ export function HomePage() {
         const raw = response.data?.messages[response.data.messages.length - 1]?.content || "";
         let parsed: RubricRow[] | null = null;
         try {
-          const jsonRegex = /\[\s*\{[\s\S]*\}\s*\]/;
-          const match = raw.match(jsonRegex);
-          if (match) {
-            parsed = JSON.parse(match[0]);
+          // Enhanced JSON extraction: finds the outermost array brackets
+          const startIdx = raw.indexOf('[');
+          const endIdx = raw.lastIndexOf(']');
+          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+            const jsonCandidate = raw.substring(startIdx, endIdx + 1);
+            parsed = JSON.parse(jsonCandidate);
           } else {
-            const trimmed = raw.trim().replace(/^```json/, '').replace(/```$/, '').trim();
-            parsed = JSON.parse(trimmed);
+            // Fallback for markdown-wrapped or raw text
+            const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+            parsed = JSON.parse(cleaned);
           }
         } catch (parseError) {
           console.error("JSON parse failed. Raw content:", raw, parseError);
@@ -92,6 +99,7 @@ export function HomePage() {
       exportRubricToPDF(rubricData, formData);
     }
   }, [formData, rubricData]);
+  if (!mounted) return null;
   return (
     <div className="min-h-screen grid-paper flex flex-col">
       <header className="bg-white/70 backdrop-blur-md sticky top-0 z-40 border-b border-primary/10">
@@ -118,9 +126,10 @@ export function HomePage() {
           {view === 'form' && (
             <motion.div
               key="form"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
               className="max-w-4xl mx-auto"
             >
               <div className="text-center mb-12 space-y-4">
@@ -155,6 +164,8 @@ export function HomePage() {
               key="result"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.4 }}
               className="space-y-8"
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
