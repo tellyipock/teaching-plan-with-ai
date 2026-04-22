@@ -82,7 +82,8 @@ function runSetupCommands() {
     "bun add jspdf-autotable@^3.8.2",
     "bun add react-dropzone@^14.3.5",
     "bun install jspdf jspdf-autotable",
-    "bun add @fontsource/roboto"
+    "bun add @fontsource/roboto",
+    "bun add @modelcontextprotocol/sdk"
 ];
     
     if (commands.length === 0) {
