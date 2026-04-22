@@ -20,8 +20,9 @@ export function HomePage() {
   const handleGenerate = useCallback(async (data: RubricFormData) => {
     setFormData(data);
     setView('loading');
+    const teacherContext = data.teacherName ? `Teacher: ${data.teacherName}. ` : "";
     const prompt = `Generate a structured grading rubric for: ${data.assignmentName} in ${data.subject} (${data.gradeLevel}).
-    Tone: ${data.tone}. Scale: ${data.scale} levels.
+    ${teacherContext}Tone: ${data.tone}. Scale: ${data.scale} levels.
     Context: ${data.context}
     CRITICAL: Return ONLY a raw JSON array of objects. No preamble. No markdown code blocks.
     Example format:
@@ -80,7 +81,7 @@ export function HomePage() {
               <div className="bg-primary p-1.5 rounded rotate-3 shadow-sm">
                 <FileText className="text-white w-5 h-5" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">Rubric<span className="text-primary">Flow</span></h1>
+              <h1 className="text-2xl font-bold tracking-tight">Linear<span className="text-primary">Ed</span></h1>
             </div>
             <SketchyUnderline className="h-1" />
           </div>
@@ -145,7 +146,10 @@ export function HomePage() {
                 </button>
                 <div className="text-left sm:text-right">
                   <h2 className="text-2xl md:text-3xl font-bold">{formData?.assignmentName}</h2>
-                  <p className="text-muted-foreground">{formData?.subject} • {formData?.gradeLevel}</p>
+                  <p className="text-muted-foreground">
+                    {formData?.subject} • {formData?.gradeLevel}
+                    {formData?.teacherName && ` • ${formData.teacherName}`}
+                  </p>
                 </div>
               </div>
               <div className="bg-primary/5 border border-primary/10 p-4 rounded-xl flex gap-3 text-primary text-sm shadow-sm">

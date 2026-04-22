@@ -15,7 +15,7 @@ export class MCPManager {
       try {
         const transport = new SSEClientTransport(new URL(serverConfig.sseUrl));
         const client = new Client({
-          name: 'cloudflare-agent',
+          name: 'lineared-agent',
           version: '1.0.0'
         }, {
           capabilities: {}

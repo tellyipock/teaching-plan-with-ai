@@ -10,7 +10,11 @@ export const exportRubricToPDF = (data: RubricRow[], metadata: RubricFormData) =
   doc.text(metadata.assignmentName, 14, 20);
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text(`Subject: ${metadata.subject} | Grade: ${metadata.gradeLevel} | Scale: ${metadata.scale}-pt`, 14, 28);
+  let metaLine = `Subject: ${metadata.subject} | Grade: ${metadata.gradeLevel} | Scale: ${metadata.scale}-pt`;
+  if (metadata.teacherName) {
+    metaLine = `Teacher: ${metadata.teacherName} | ` + metaLine;
+  }
+  doc.text(metaLine, 14, 28);
   const headers = [['Criterion', ...Array.from({ length: metadata.scale }, (_, i) => `Level ${metadata.scale - i}`)]];
   const body = data.map(row => [
     row.criterion,
@@ -36,5 +40,5 @@ export const exportRubricToPDF = (data: RubricRow[], metadata: RubricFormData) =
       0: { fontStyle: 'bold', cellWidth: 40 }
     }
   });
-  doc.save(`${metadata.assignmentName.replace(/\s+/g, '_')}_Rubric.pdf`);
+  doc.save(`${metadata.assignmentName.replace(/\s+/g, '_')}_LinearEd_Rubric.pdf`);
 };

@@ -61,12 +61,24 @@ export const useRubricStore = create<RubricStore>()(
       clearCurrent: () => set({ currentRubricId: null }),
     }),
     {
-      name: 'rubric-storage',
-      // Ensure hydration happens cleanly in browser
-      partialize: (state) => ({ 
+      name: 'lineared-storage',
+      version: 1,
+      partialize: (state) => ({
         savedRubrics: state.savedRubrics,
-        currentRubricId: state.currentRubricId 
+        currentRubricId: state.currentRubricId
       }),
+      // Handle potential metadata shifts gracefully
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...persistedState,
+        savedRubrics: (persistedState.savedRubrics || []).map((r: any) => ({
+          ...r,
+          metadata: {
+            teacherName: '', // Fallback for old rubrics
+            ...r.metadata
+          }
+        }))
+      })
     }
   )
 );
