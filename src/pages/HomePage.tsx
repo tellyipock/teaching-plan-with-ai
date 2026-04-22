@@ -15,7 +15,6 @@ export function HomePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [rubricData, setRubricData] = useState<RubricRow[]>([]);
   const [formData, setFormData] = useState<RubricFormData | null>(null);
-  // Zustand selectors - Primitives only
   const saveRubric = useRubricStore(s => s.saveRubric);
   const clearCurrent = useRubricStore(s => s.clearCurrent);
   const handleGenerate = useCallback(async (data: RubricFormData) => {
@@ -23,7 +22,7 @@ export function HomePage() {
     setView('loading');
     setIsGenerating(true);
     const teacherContext = data.teacherName ? `Teacher: ${data.teacherName}. ` : "";
-    const prompt = `Generate a structured grading rubric for: ${data.assignmentName} in ${data.subject} (${data.gradeLevel}).
+    const prompt = `Generate a high-school level pedagogical grading rubric for: ${data.assignmentName} in ${data.subject} for the ${data.gradeLevel} Grade level.
     ${teacherContext}Tone: ${data.tone}. Scale: ${data.scale} levels.
     Context: ${data.context}
     CRITICAL: Return ONLY a raw JSON array of objects. No preamble. No markdown code blocks.
@@ -31,20 +30,18 @@ export function HomePage() {
     [
       {"id": "1", "criterion": "Structure", "levels": ["Expertly organized...", "Mostly organized...", "Lacks organization..."]}
     ]
-    Ensure exact scale matches: each object must have "levels" array of length ${data.scale}.`;
+    Ensure exact scale matches: each object must have "levels" array of length ${data.scale}. Ensure the vocabulary and depth are appropriate for a ${data.gradeLevel} Grade student.`;
     try {
       const response = await chatService.sendMessage(prompt);
       if (response.success) {
         const raw = response.data?.messages[response.data.messages.length - 1]?.content || "";
         let parsed: RubricRow[] | null = null;
         try {
-          // Robust JSON extraction: look for [ ... ] blocks, including those wrapped in markdown
           const jsonRegex = /\[\s*\{[\s\S]*\}\s*\]/;
           const match = raw.match(jsonRegex);
           if (match) {
             parsed = JSON.parse(match[0]);
           } else {
-            // Fallback: try parsing the whole trimmed string
             const trimmed = raw.trim().replace(/^```json/, '').replace(/```$/, '').trim();
             parsed = JSON.parse(trimmed);
           }
@@ -52,7 +49,6 @@ export function HomePage() {
           console.error("JSON parse failed. Raw content:", raw, parseError);
         }
         if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-          // Normalize IDs if missing or invalid
           const normalized = parsed.map((item, idx) => ({
             ...item,
             id: item.id || crypto.randomUUID() || String(idx)
@@ -171,14 +167,16 @@ export function HomePage() {
                 <div className="text-left sm:text-right">
                   <h2 className="text-2xl md:text-3xl font-bold">{formData?.assignmentName}</h2>
                   <p className="text-muted-foreground">
-                    {formData?.subject} • {formData?.gradeLevel}
+                    {formData?.subject} • {formData?.gradeLevel} Grade
                     {formData?.teacherName && ` • ${formData.teacherName}`}
                   </p>
                 </div>
               </div>
               <div className="bg-primary/5 border border-primary/10 p-4 rounded-xl flex gap-3 text-primary text-sm shadow-sm">
-                <Info className="w-5 h-5 shrink-0" />
-                <p><strong>Educator Workspace:</strong> Refine individual cells to perfectly match your classroom's needs. Your changes are saved to your library automatically when you click "Save Changes".</p>
+                <div className="shrink-0 pt-0.5">
+                  <Info className="w-5 h-5" />
+                </div>
+                <p><strong>Educator Workspace:</strong> Refine individual cells to perfectly match your classroom's needs. Your changes are saved to your library automatically when you click "Save Workspace".</p>
               </div>
               <EditableRubric
                 data={rubricData}

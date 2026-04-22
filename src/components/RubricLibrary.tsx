@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRubricStore, SavedRubric } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ interface RubricLibraryProps {
   onLoad: (rubric: SavedRubric) => void;
 }
 export function RubricLibrary({ onLoad }: RubricLibraryProps) {
-  // Use shallow for the array to avoid re-renders on other store changes
   const savedRubrics = useRubricStore(useShallow(s => s.savedRubrics));
   const deleteRubric = useRubricStore(s => s.deleteRubric);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +34,9 @@ export function RubricLibrary({ onLoad }: RubricLibraryProps) {
           <SheetTitle className="text-2xl font-bold flex items-center gap-2">
             <Library className="text-primary" /> Rubric Library
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Browse and manage your previously generated rubrics. Search by assignment name or subject.
+          </SheetDescription>
           <div className="relative pt-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input

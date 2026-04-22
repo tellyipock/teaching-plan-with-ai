@@ -20,6 +20,7 @@ const SUBJECT_OPTIONS = [
   "Math",
   "Physical Science"
 ];
+const GRADE_LEVELS = ["9th", "10th", "11th", "12th"];
 const formSchema = z.object({
   assignmentName: z.string().min(3, "Title is too short"),
   teacherName: z.string().optional(),
@@ -41,7 +42,7 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
       assignmentName: '',
       teacherName: '',
       subject: '',
-      gradeLevel: 'High School',
+      gradeLevel: '9th',
       scale: 4,
       context: '',
       tone: 'Balanced',
@@ -76,14 +77,14 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Grade Level</Label>
-              <Select onValueChange={(v) => form.setValue('gradeLevel', v)} defaultValue="High School">
+              <Select onValueChange={(v) => form.setValue('gradeLevel', v)} defaultValue="9th">
                 <SelectTrigger className="bg-muted/50 border-none">
                   <SelectValue placeholder="Select level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Middle School">Middle School</SelectItem>
-                  <SelectItem value="High School">High School</SelectItem>
-                  <SelectItem value="Undergraduate">Undergraduate</SelectItem>
+                  {GRADE_LEVELS.map((level) => (
+                    <SelectItem key={level} value={level}>{level} Grade</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
