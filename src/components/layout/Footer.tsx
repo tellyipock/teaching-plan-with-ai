@@ -9,10 +9,10 @@ export function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Sparkles className="text-primary w-5 h-5" />
-              <span className="text-xl font-bold">LinearEd</span>
+              <span className="text-xl font-bold">RubricFlow</span>
             </div>
             <p className="text-muted-foreground text-sm max-w-xs">
-              Empowering educators with AI-driven productivity tools. Streamlining classroom management and grading workflows globally.
+              Empowering educators with AI-driven productivity tools to spend more time on what matters: student growth.
             </p>
           </div>
           <div className="space-y-4">
@@ -39,12 +39,12 @@ export function Footer() {
         <div className="pt-8 border-t border-primary/5 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
             <ShieldCheck className="w-3 h-3" />
-            <p>Note: LinearEd utilizes AI processing. There is a limit on the number of requests that can be made to the AI servers across all user apps in a given time period.</p>
+            <p>Note: RubricFlow utilizes AI processing. There is a limit on the number of requests that can be made to the AI servers across all user apps in a given time period.</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>© 2024 LinearEd. Crafted with</span>
+            <span>© 2024 RubricFlow. Made with</span>
             <Heart className="w-4 h-4 text-red-500 fill-current" />
-            <span>for the modern classroom</span>
+            <span>in the classroom</span>
           </div>
         </div>
       </div>

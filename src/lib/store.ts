@@ -24,7 +24,7 @@ export const useRubricStore = create<RubricStore>()(
       saveRubric: (metadata, data) => {
         const { savedRubrics, currentRubricId } = get();
         const now = Date.now();
-        if (currentRubricId && savedRubrics.some(r => r.id === currentRubricId)) {
+        if (currentRubricId) {
           // Update existing
           set({
             savedRubrics: savedRubrics.map((r) =>
@@ -32,7 +32,7 @@ export const useRubricStore = create<RubricStore>()(
             ),
           });
         } else {
-          // Create new record
+          // Create new
           const newId = crypto.randomUUID();
           const newRubric: SavedRubric = {
             id: newId,
@@ -54,8 +54,7 @@ export const useRubricStore = create<RubricStore>()(
         });
       },
       loadRubric: (id) => {
-        const { savedRubrics } = get();
-        const rubric = savedRubrics.find((r) => r.id === id) || null;
+        const rubric = get().savedRubrics.find((r) => r.id === id) || null;
         if (rubric) {
           set({ currentRubricId: id });
         }
@@ -64,36 +63,7 @@ export const useRubricStore = create<RubricStore>()(
       clearCurrent: () => set({ currentRubricId: null }),
     }),
     {
-      name: 'lineared-storage-v2',
-      version: 2,
-      partialize: (state) => ({
-        savedRubrics: state.savedRubrics,
-        currentRubricId: state.currentRubricId
-      }),
-      migrate: (persistedState: any, version: number) => {
-        let state = persistedState as any;
-        if (version < 2) {
-          // Migration from initial beta schema to LinearEd production schema
-          const rubrics = state?.savedRubrics || [];
-          state = {
-            ...state,
-            savedRubrics: rubrics.map((r: any) => ({
-              ...r,
-              metadata: {
-                ...r.metadata,
-                teacherName: r.metadata?.teacherName ?? '',
-                tone: r.metadata?.tone ?? 'Balanced',
-                gradeLevel: r.metadata?.gradeLevel ?? '9th'
-              }
-            }))
-          };
-        }
-        // Final validation: Ensure empty state structure is valid if corrupted
-        return {
-          savedRubrics: Array.isArray(state?.savedRubrics) ? state.savedRubrics : [],
-          currentRubricId: typeof state?.currentRubricId === 'string' ? state.currentRubricId : null
-        };
-      }
+      name: 'rubric-storage',
     }
   )
 );
