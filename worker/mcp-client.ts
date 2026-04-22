@@ -1,7 +1,5 @@
-// @ts-ignore - ESM resolution in workers can be tricky with deep paths
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-// @ts-ignore - ESM resolution in workers can be tricky with deep paths
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { Client } from '@modelcontextprotocol/sdk/client';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse';
 interface MCPServerConfig {
   name: string;
   sseUrl: string;

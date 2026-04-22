@@ -2,7 +2,6 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { GraduationCap, BookOpen, Layers, Sparkles, User } from 'lucide-react';
-import { SketchyCard, SketchyUnderline } from './IllustrativeBranding';
+import { SketchyCard } from './IllustrativeBranding';
+const SUBJECT_OPTIONS = [
+  "Biology",
+  "Chemistry",
+  "Earth & Environmental Science",
+  "Economics and Personal Finance",
+  "English",
+  "History",
+  "Math",
+  "Physical Science"
+];
 const formSchema = z.object({
   assignmentName: z.string().min(3, "Title is too short"),
   teacherName: z.string().optional(),
@@ -80,7 +89,16 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
             </div>
             <div className="space-y-2">
               <Label>Subject</Label>
-              <Input placeholder="e.g. English" {...form.register('subject')} className="bg-muted/50 border-none" />
+              <Select onValueChange={(v) => form.setValue('subject', v)} value={form.watch('subject')}>
+                <SelectTrigger className="bg-muted/50 border-none">
+                  <SelectValue placeholder="Select Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUBJECT_OPTIONS.map((subj) => (
+                    <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </SketchyCard>
