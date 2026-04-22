@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useRubricStore } from '@/lib/store';
+import React, { useState, useMemo } from 'react';
+import { useRubricStore, SavedRubric } from '@/lib/store';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -7,17 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Library, Trash2, FileText, Calendar, Search } from 'lucide-react';
 import { format } from 'date-fns';
 interface RubricLibraryProps {
-  onLoad: (rubric: any) => void;
+  onLoad: (rubric: SavedRubric) => void;
 }
 export function RubricLibrary({ onLoad }: RubricLibraryProps) {
-  const savedRubrics = useRubricStore((s) => s.savedRubrics);
-  const deleteRubric = useRubricStore((s) => s.deleteRubric);
+  const savedRubrics = useRubricStore(s => s.savedRubrics);
+  const deleteRubric = useRubricStore(s => s.deleteRubric);
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const filtered = savedRubrics.filter((r) =>
-    r.metadata.assignmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.metadata.subject.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    return savedRubrics.filter((r) =>
+      r.metadata.assignmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.metadata.subject.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [savedRubrics, searchTerm]);
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
@@ -69,7 +71,9 @@ export function RubricLibrary({ onLoad }: RubricLibraryProps) {
                       className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Delete this rubric?')) deleteRubric(rubric.id);
+                        if (confirm('Delete this rubric?')) {
+                          deleteRubric(rubric.id);
+                        }
                       }}
                     >
                       <Trash2 className="w-4 h-4" />

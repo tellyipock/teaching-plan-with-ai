@@ -25,14 +25,12 @@ export const useRubricStore = create<RubricStore>()(
         const { savedRubrics, currentRubricId } = get();
         const now = Date.now();
         if (currentRubricId) {
-          // Update existing
           set({
             savedRubrics: savedRubrics.map((r) =>
               r.id === currentRubricId ? { ...r, metadata, data, updatedAt: now } : r
             ),
           });
         } else {
-          // Create new
           const newId = crypto.randomUUID();
           const newRubric: SavedRubric = {
             id: newId,
@@ -64,6 +62,11 @@ export const useRubricStore = create<RubricStore>()(
     }),
     {
       name: 'rubric-storage',
+      // Ensure hydration happens cleanly in browser
+      partialize: (state) => ({ 
+        savedRubrics: state.savedRubrics,
+        currentRubricId: state.currentRubricId 
+      }),
     }
   )
 );

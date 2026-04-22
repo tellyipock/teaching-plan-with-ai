@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Download, Save, Info } from "lucide-react";
-import { cn } from '@/lib/utils';
+import { Plus, Trash2, Download, Save } from "lucide-react";
 export interface RubricRow {
   id: string;
   criterion: string;
@@ -17,8 +16,8 @@ interface EditableRubricProps {
   onSave?: () => void;
 }
 export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: EditableRubricProps) {
-  const handleCellChange = (rowId: string, type: 'criterion' | number, value: string) => {
-    const newData = data.map(row => {
+  const handleCellChange = useCallback((rowId: string, type: 'criterion' | number, value: string) => {
+    onUpdate(data.map(row => {
       if (row.id === rowId) {
         if (type === 'criterion') return { ...row, criterion: value };
         const newLevels = [...row.levels];
@@ -26,20 +25,19 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
         return { ...row, levels: newLevels };
       }
       return row;
-    });
-    onUpdate(newData);
-  };
-  const addRow = () => {
+    }));
+  }, [data, onUpdate]);
+  const addRow = useCallback(() => {
     const newRow: RubricRow = {
       id: crypto.randomUUID(),
       criterion: 'New Criterion',
       levels: Array(scale).fill('Level description...')
     };
     onUpdate([...data, newRow]);
-  };
-  const removeRow = (id: string) => {
+  }, [data, scale, onUpdate]);
+  const removeRow = useCallback((id: string) => {
     onUpdate(data.filter(r => r.id !== id));
-  };
+  }, [data, onUpdate]);
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-500">
       <div className="relative rounded-xl border-2 border-primary/20 bg-white shadow-xl overflow-hidden">
@@ -49,7 +47,7 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
               <TableRow>
                 <TableHead className="w-[200px] font-bold text-primary">Criterion</TableHead>
                 {Array.from({ length: scale }).map((_, i) => (
-                  <TableHead key={i} className="font-bold text-primary text-center">
+                  <TableHead key={`head-${i}`} className="font-bold text-primary text-center">
                     Level {scale - i}
                   </TableHead>
                 ))}
@@ -67,7 +65,7 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
                     />
                   </TableCell>
                   {row.levels.map((level, idx) => (
-                    <TableCell key={idx} className="align-top p-2 border-l border-muted/50">
+                    <TableCell key={`${row.id}-level-${idx}`} className="align-top p-2 border-l border-muted/50">
                       <Textarea
                         value={level}
                         onChange={(e) => handleCellChange(row.id, idx, e.target.value)}
@@ -97,8 +95,8 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
         </Button>
         <div className="flex flex-wrap justify-center gap-4 w-full sm:w-auto">
           {onSave && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={onSave}
               className="border-primary/20 text-primary hover:bg-primary/5"
             >

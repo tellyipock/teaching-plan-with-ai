@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, FileText, ChevronLeft, Info } from 'lucide-react';
 import { RubricForm, RubricFormData } from '@/components/RubricForm';
@@ -14,10 +14,10 @@ export function HomePage() {
   const [view, setView] = useState<'form' | 'loading' | 'result'>('form');
   const [rubricData, setRubricData] = useState<RubricRow[]>([]);
   const [formData, setFormData] = useState<RubricFormData | null>(null);
-  const saveRubric = useRubricStore((s) => s.saveRubric);
-  const clearCurrent = useRubricStore((s) => s.clearCurrent);
-  const loadRubricById = useRubricStore((s) => s.loadRubric);
-  const handleGenerate = async (data: RubricFormData) => {
+  // Zustand selectors - Primitives only
+  const saveRubric = useRubricStore(s => s.saveRubric);
+  const clearCurrent = useRubricStore(s => s.clearCurrent);
+  const handleGenerate = useCallback(async (data: RubricFormData) => {
     setFormData(data);
     setView('loading');
     const prompt = `Generate a structured grading rubric for: ${data.assignmentName} in ${data.subject} (${data.gradeLevel}).
@@ -38,34 +38,39 @@ export function HomePage() {
           const parsed = JSON.parse(match[0]);
           setRubricData(parsed);
           setView('result');
-          // Auto-save initial version
           saveRubric(data, parsed);
         } else {
           throw new Error("Invalid format received");
         }
       }
     } catch (err) {
+      console.error("Generation error:", err);
       toast.error("Generation failed. Please check your instructions and try again.");
       setView('form');
     }
-  };
-  const handleLoad = (rubric: SavedRubric) => {
+  }, [saveRubric]);
+  const handleLoad = useCallback((rubric: SavedRubric) => {
     setFormData(rubric.metadata);
     setRubricData(rubric.data);
     setView('result');
-  };
-  const handleStartNew = () => {
+  }, []);
+  const handleStartNew = useCallback(() => {
     clearCurrent();
     setFormData(null);
     setRubricData([]);
     setView('form');
-  };
-  const handleSave = () => {
+  }, [clearCurrent]);
+  const handleSave = useCallback(() => {
     if (formData) {
       saveRubric(formData, rubricData);
       toast.success("Changes saved to your library");
     }
-  };
+  }, [formData, rubricData, saveRubric]);
+  const handleExport = useCallback(() => {
+    if (formData) {
+      exportRubricToPDF(rubricData, formData);
+    }
+  }, [formData, rubricData]);
   return (
     <div className="min-h-screen grid-paper flex flex-col">
       <header className="bg-white/70 backdrop-blur-md sticky top-0 z-40 border-b border-primary/10">
@@ -151,7 +156,7 @@ export function HomePage() {
                 data={rubricData}
                 scale={formData?.scale || 4}
                 onUpdate={setRubricData}
-                onExport={() => formData && exportRubricToPDF(rubricData, formData)}
+                onExport={handleExport}
                 onSave={handleSave}
               />
             </motion.div>
