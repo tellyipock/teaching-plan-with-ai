@@ -62,23 +62,29 @@ export const useRubricStore = create<RubricStore>()(
     }),
     {
       name: 'lineared-storage',
-      version: 1,
+      version: 2, // Bumped version for LinearEd schema
       partialize: (state) => ({
         savedRubrics: state.savedRubrics,
         currentRubricId: state.currentRubricId
       }),
-      // Handle potential metadata shifts gracefully
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        ...persistedState,
-        savedRubrics: (persistedState.savedRubrics || []).map((r: any) => ({
-          ...r,
-          metadata: {
-            teacherName: '', // Fallback for old rubrics
-            ...r.metadata
-          }
-        }))
-      })
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          // Migration from RubricFlow (v1) to LinearEd (v2)
+          const rubrics = (persistedState as any).savedRubrics || [];
+          return {
+            ...persistedState,
+            savedRubrics: rubrics.map((r: any) => ({
+              ...r,
+              metadata: {
+                ...r.metadata,
+                teacherName: r.metadata.teacherName ?? '', // Ensure teacherName exists
+                tone: r.metadata.tone ?? 'Balanced'
+              }
+            }))
+          };
+        }
+        return persistedState as any;
+      }
     }
   )
 );

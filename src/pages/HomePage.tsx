@@ -34,19 +34,32 @@ export function HomePage() {
       const response = await chatService.sendMessage(prompt);
       if (response.success) {
         const raw = response.data?.messages[response.data.messages.length - 1]?.content || "";
-        const match = raw.match(/\[.*\]/s);
-        if (match) {
-          const parsed = JSON.parse(match[0]);
+        // Robust JSON extraction
+        let parsed: RubricRow[] | null = null;
+        try {
+          const match = raw.match(/\[\s*\{.*\}\s*\]/s);
+          if (match) {
+            parsed = JSON.parse(match[0]);
+          } else {
+            // Try parsing raw content if no match
+            parsed = JSON.parse(raw.trim());
+          }
+        } catch (parseError) {
+          console.error("JSON parse failed", parseError);
+        }
+        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
           setRubricData(parsed);
           setView('result');
           saveRubric(data, parsed);
         } else {
-          throw new Error("Invalid format received");
+          throw new Error("Invalid rubric format received from AI");
         }
+      } else {
+        throw new Error(response.error || "Failed to contact AI agent");
       }
     } catch (err) {
       console.error("Generation error:", err);
-      toast.error("Generation failed. Please check your instructions and try again.");
+      toast.error(err instanceof Error ? err.message : "Generation failed. Please try again.");
       setView('form');
     }
   }, [saveRubric]);

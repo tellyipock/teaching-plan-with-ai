@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useRubricStore, SavedRubric } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,8 @@ interface RubricLibraryProps {
   onLoad: (rubric: SavedRubric) => void;
 }
 export function RubricLibrary({ onLoad }: RubricLibraryProps) {
-  const savedRubrics = useRubricStore(s => s.savedRubrics);
+  // Use shallow for the array to avoid re-renders on other store changes
+  const savedRubrics = useRubricStore(useShallow(s => s.savedRubrics));
   const deleteRubric = useRubricStore(s => s.deleteRubric);
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
