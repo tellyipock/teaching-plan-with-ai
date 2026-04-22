@@ -41,37 +41,48 @@ export function HomePage() {
         const raw = response.data?.messages[response.data.messages.length - 1]?.content || "";
         let parsed: RubricRow[] | null = null;
         try {
-          // Enhanced JSON extraction: finds the outermost array brackets
+          // 1st defense: bracket search
           const startIdx = raw.indexOf('[');
           const endIdx = raw.lastIndexOf(']');
           if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
             const jsonCandidate = raw.substring(startIdx, endIdx + 1);
             parsed = JSON.parse(jsonCandidate);
           } else {
-            // Fallback for markdown-wrapped or raw text
-            const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
-            parsed = JSON.parse(cleaned);
+            // 2nd defense: Regex for array content if brackets failed or were messy
+            const arrayMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (arrayMatch) {
+              parsed = JSON.parse(arrayMatch[0]);
+            } else {
+              // 3rd defense: cleanup markdown tags
+              const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+              parsed = JSON.parse(cleaned);
+            }
           }
         } catch (parseError) {
-          console.error("JSON parse failed. Raw content:", raw, parseError);
+          console.error("JSON extraction failed:", raw, parseError);
         }
         if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+          // Scale Validation: Ensure each row matches the requested scale
+          const isValidScale = parsed.every(row => row.levels && row.levels.length === data.scale);
+          if (!isValidScale) {
+            throw new Error(`The AI generated a rubric with the wrong number of levels (requested ${data.scale}). Please try again.`);
+          }
           const normalized = parsed.map((item, idx) => ({
             ...item,
-            id: item.id || crypto.randomUUID() || String(idx)
+            id: item.id || crypto.randomUUID() || `row-${idx}-${Date.now()}`
           }));
           setRubricData(normalized);
           setView('result');
           saveRubric(data, normalized);
         } else {
-          throw new Error("I couldn't generate a valid rubric structure. Please try again with more detail.");
+          throw new Error("I couldn't generate a valid rubric structure. Please provide more specific assignment details and try again.");
         }
       } else {
-        throw new Error(response.error || "Failed to contact AI agent");
+        throw new Error(response.error || "Failed to connect to the AI Architect.");
       }
     } catch (err) {
       console.error("Generation error:", err);
-      toast.error(err instanceof Error ? err.message : "Generation failed. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Generation failed. Please check your connection and try again.");
       setView('form');
     } finally {
       setIsGenerating(false);
@@ -91,7 +102,7 @@ export function HomePage() {
   const handleSave = useCallback(() => {
     if (formData) {
       saveRubric(formData, rubricData);
-      toast.success("Changes saved to your library");
+      toast.success("Progress saved to LinearEd library");
     }
   }, [formData, rubricData, saveRubric]);
   const handleExport = useCallback(() => {
@@ -101,7 +112,7 @@ export function HomePage() {
   }, [formData, rubricData]);
   if (!mounted) return null;
   return (
-    <div className="min-h-screen grid-paper flex flex-col">
+    <div className="min-h-screen grid-paper flex flex-col transition-opacity duration-500">
       <header className="bg-white/70 backdrop-blur-md sticky top-0 z-40 border-b border-primary/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex flex-col">
@@ -116,7 +127,7 @@ export function HomePage() {
           <div className="flex items-center gap-4">
             <RubricLibrary onLoad={handleLoad} />
             <div className="hidden lg:block">
-              <Handwriting className="text-sm">Teaching made smarter</Handwriting>
+              <Handwriting className="text-sm">Excellence in every expectation</Handwriting>
             </div>
           </div>
         </div>
@@ -133,9 +144,11 @@ export function HomePage() {
               className="max-w-4xl mx-auto"
             >
               <div className="text-center mb-12 space-y-4">
-                <h2 className="text-4xl md:text-5xl font-bold leading-tight">Create a Rubric in <span className="italic text-primary">Seconds</span></h2>
+                <h2 className="text-4xl md:text-5xl font-bold leading-tight">
+                  Design a Rubric in <span className="italic text-primary">Seconds</span>
+                </h2>
                 <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-                  Transform assignment descriptions into professional pedagogical roadmaps instantly.
+                  Transform assignment prompts into high-quality pedagogical roadmaps for your students.
                 </p>
               </div>
               <RubricForm onSubmit={handleGenerate} isLoading={isGenerating} />
@@ -154,8 +167,8 @@ export function HomePage() {
                 <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary animate-pulse w-7 h-7" />
               </div>
               <div className="text-center space-y-2">
-                <h3 className="text-2xl font-bold">Crafting your rubric...</h3>
-                <p className="text-muted-foreground italic">Designing clear expectations for your students</p>
+                <h3 className="text-2xl font-bold">The AI Architect is at work...</h3>
+                <p className="text-muted-foreground italic">Aligning criteria with your classroom goals</p>
               </div>
             </motion.div>
           )}
@@ -173,7 +186,8 @@ export function HomePage() {
                   onClick={handleStartNew}
                   className="flex items-center gap-2 text-primary font-bold hover:underline group"
                 >
-                  <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> Start New Assignment
+                  <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
+                  Back to Form
                 </button>
                 <div className="text-left sm:text-right">
                   <h2 className="text-2xl md:text-3xl font-bold">{formData?.assignmentName}</h2>
@@ -187,7 +201,11 @@ export function HomePage() {
                 <div className="shrink-0 pt-0.5">
                   <Info className="w-5 h-5" />
                 </div>
-                <p><strong>Educator Workspace:</strong> Refine individual cells to perfectly match your classroom's needs. Your changes are saved to your library automatically when you click "Save Workspace".</p>
+                <p>
+                  <strong>LinearEd Workspace:</strong> Review and refine each cell. 
+                  Changes are locally cached and saved to your library when you click 
+                  "Save Workspace".
+                </p>
               </div>
               <EditableRubric
                 data={rubricData}

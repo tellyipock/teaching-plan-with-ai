@@ -24,13 +24,15 @@ export const useRubricStore = create<RubricStore>()(
       saveRubric: (metadata, data) => {
         const { savedRubrics, currentRubricId } = get();
         const now = Date.now();
-        if (currentRubricId) {
+        if (currentRubricId && savedRubrics.some(r => r.id === currentRubricId)) {
+          // Update existing
           set({
             savedRubrics: savedRubrics.map((r) =>
               r.id === currentRubricId ? { ...r, metadata, data, updatedAt: now } : r
             ),
           });
         } else {
+          // Create new record
           const newId = crypto.randomUUID();
           const newRubric: SavedRubric = {
             id: newId,
@@ -52,7 +54,8 @@ export const useRubricStore = create<RubricStore>()(
         });
       },
       loadRubric: (id) => {
-        const rubric = get().savedRubrics.find((r) => r.id === id) || null;
+        const { savedRubrics } = get();
+        const rubric = savedRubrics.find((r) => r.id === id) || null;
         if (rubric) {
           set({ currentRubricId: id });
         }
@@ -61,29 +64,35 @@ export const useRubricStore = create<RubricStore>()(
       clearCurrent: () => set({ currentRubricId: null }),
     }),
     {
-      name: 'lineared-storage',
-      version: 2, // Bumped version for LinearEd schema
+      name: 'lineared-storage-v2',
+      version: 2,
       partialize: (state) => ({
         savedRubrics: state.savedRubrics,
         currentRubricId: state.currentRubricId
       }),
       migrate: (persistedState: any, version: number) => {
+        let state = persistedState as any;
         if (version < 2) {
-          // Migration from RubricFlow (v1) to LinearEd (v2)
-          const rubrics = (persistedState as any).savedRubrics || [];
-          return {
-            ...persistedState,
+          // Migration from initial beta schema to LinearEd production schema
+          const rubrics = state?.savedRubrics || [];
+          state = {
+            ...state,
             savedRubrics: rubrics.map((r: any) => ({
               ...r,
               metadata: {
                 ...r.metadata,
-                teacherName: r.metadata.teacherName ?? '', // Ensure teacherName exists
-                tone: r.metadata.tone ?? 'Balanced'
+                teacherName: r.metadata?.teacherName ?? '',
+                tone: r.metadata?.tone ?? 'Balanced',
+                gradeLevel: r.metadata?.gradeLevel ?? '9th'
               }
             }))
           };
         }
-        return persistedState as any;
+        // Final validation: Ensure empty state structure is valid if corrupted
+        return {
+          savedRubrics: Array.isArray(state?.savedRubrics) ? state.savedRubrics : [],
+          currentRubricId: typeof state?.currentRubricId === 'string' ? state.currentRubricId : null
+        };
       }
     }
   )
