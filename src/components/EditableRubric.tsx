@@ -1,13 +1,41 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Download, Save } from "lucide-react";
+import { cn } from "@/lib/utils";
 export interface RubricRow {
   id: string;
   criterion: string;
   levels: string[];
 }
+interface AutoSizeTextareaProps extends React.ComponentProps<typeof Textarea> {
+  value: string;
+}
+const AutoSizeTextarea = ({ value, className, ...props }: AutoSizeTextareaProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const adjustHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  };
+  useEffect(() => {
+    adjustHeight();
+  }, [value]);
+  return (
+    <Textarea
+      ref={textareaRef}
+      value={value}
+      className={cn(
+        "border-transparent focus:border-primary/20 focus-visible:ring-1 resize-none bg-transparent overflow-hidden transition-all duration-200",
+        className
+      )}
+      {...props}
+    />
+  );
+};
 interface EditableRubricProps {
   data: RubricRow[];
   scale: number;
@@ -31,7 +59,7 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
     const newRow: RubricRow = {
       id: crypto.randomUUID(),
       criterion: 'New Criterion',
-      levels: Array(scale).fill('Level description...')
+      levels: Array(scale).fill('')
     };
     onUpdate([...data, newRow]);
   }, [data, scale, onUpdate]);
@@ -45,43 +73,50 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
           <Table className="min-w-[800px]">
             <TableHeader className="bg-primary/5">
               <TableRow>
-                <TableHead className="w-[200px] font-bold text-primary">Criterion</TableHead>
+                <TableHead className="w-[200px] font-bold text-primary py-4">Criterion</TableHead>
                 {Array.from({ length: scale }).map((_, i) => (
-                  <TableHead key={`head-${i}`} className="font-bold text-primary text-center">
+                  <TableHead key={`head-${i}`} className="font-bold text-primary text-center py-4">
                     Level {scale - i}
                   </TableHead>
                 ))}
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((row) => (
-                <TableRow key={row.id} className="hover:bg-muted/30 group">
+                <TableRow key={row.id} className="hover:bg-muted/30 group transition-colors">
                   <TableCell className="align-top font-medium p-2">
-                    <Textarea
+                    <AutoSizeTextarea
+                      aria-label={`Criterion for row ${row.id}`}
                       value={row.criterion}
                       onChange={(e) => handleCellChange(row.id, 'criterion', e.target.value)}
-                      className="border-transparent focus:border-primary/20 focus-visible:ring-1 resize-none bg-transparent min-h-[60px] text-sm"
+                      className="min-h-[60px] text-sm font-semibold"
+                      placeholder="e.g. Analysis"
                     />
                   </TableCell>
                   {row.levels.map((level, idx) => (
                     <TableCell key={`${row.id}-level-${idx}`} className="align-top p-2 border-l border-muted/50">
-                      <Textarea
+                      <AutoSizeTextarea
+                        aria-label={`Level ${scale - idx} description for row ${row.id}`}
                         value={level}
                         onChange={(e) => handleCellChange(row.id, idx, e.target.value)}
-                        className="border-transparent focus:border-primary/20 focus-visible:ring-1 resize-none bg-transparent min-h-[100px] text-xs leading-relaxed"
+                        className="min-h-[100px] text-xs leading-relaxed"
+                        placeholder={`Describe expectations for Level ${scale - idx}...`}
                       />
                     </TableCell>
                   ))}
                   <TableCell className="align-top p-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeRow(row.id)}
-                      className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeRow(row.id)}
+                        className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                        aria-label="Delete row"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -90,7 +125,11 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
         </div>
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <Button variant="outline" onClick={addRow} className="border-sketchy hover:bg-primary/5 w-full sm:w-auto">
+        <Button 
+          variant="outline" 
+          onClick={addRow} 
+          className="border-2 border-primary/20 hover:bg-primary/5 w-full sm:w-auto font-bold h-11"
+        >
           <Plus className="w-4 h-4 mr-2" /> Add New Criterion
         </Button>
         <div className="flex flex-wrap justify-center gap-4 w-full sm:w-auto">
@@ -98,12 +137,15 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
             <Button
               variant="outline"
               onClick={onSave}
-              className="border-primary/20 text-primary hover:bg-primary/5"
+              className="border-2 border-primary/20 text-primary hover:bg-primary/5 h-11 px-6 font-bold"
             >
-              <Save className="w-4 h-4 mr-2" /> Save Changes
+              <Save className="w-4 h-4 mr-2" /> Save Workspace
             </Button>
           )}
-          <Button onClick={onExport} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200">
+          <Button 
+            onClick={onExport} 
+            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 h-11 px-8 font-bold"
+          >
             <Download className="w-4 h-4 mr-2" /> Export Professional PDF
           </Button>
         </div>

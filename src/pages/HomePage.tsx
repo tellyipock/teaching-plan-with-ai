@@ -12,6 +12,7 @@ import { useRubricStore, SavedRubric } from '@/lib/store';
 import { Toaster, toast } from 'sonner';
 export function HomePage() {
   const [view, setView] = useState<'form' | 'loading' | 'result'>('form');
+  const [isGenerating, setIsGenerating] = useState(false);
   const [rubricData, setRubricData] = useState<RubricRow[]>([]);
   const [formData, setFormData] = useState<RubricFormData | null>(null);
   // Zustand selectors - Primitives only
@@ -20,6 +21,7 @@ export function HomePage() {
   const handleGenerate = useCallback(async (data: RubricFormData) => {
     setFormData(data);
     setView('loading');
+    setIsGenerating(true);
     const teacherContext = data.teacherName ? `Teacher: ${data.teacherName}. ` : "";
     const prompt = `Generate a structured grading rubric for: ${data.assignmentName} in ${data.subject} (${data.gradeLevel}).
     ${teacherContext}Tone: ${data.tone}. Scale: ${data.scale} levels.
@@ -34,25 +36,32 @@ export function HomePage() {
       const response = await chatService.sendMessage(prompt);
       if (response.success) {
         const raw = response.data?.messages[response.data.messages.length - 1]?.content || "";
-        // Robust JSON extraction
         let parsed: RubricRow[] | null = null;
         try {
-          const match = raw.match(/\[\s*\{.*\}\s*\]/s);
+          // Robust JSON extraction: look for [ ... ] blocks, including those wrapped in markdown
+          const jsonRegex = /\[\s*\{[\s\S]*\}\s*\]/;
+          const match = raw.match(jsonRegex);
           if (match) {
             parsed = JSON.parse(match[0]);
           } else {
-            // Try parsing raw content if no match
-            parsed = JSON.parse(raw.trim());
+            // Fallback: try parsing the whole trimmed string
+            const trimmed = raw.trim().replace(/^```json/, '').replace(/```$/, '').trim();
+            parsed = JSON.parse(trimmed);
           }
         } catch (parseError) {
-          console.error("JSON parse failed", parseError);
+          console.error("JSON parse failed. Raw content:", raw, parseError);
         }
         if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-          setRubricData(parsed);
+          // Normalize IDs if missing or invalid
+          const normalized = parsed.map((item, idx) => ({
+            ...item,
+            id: item.id || crypto.randomUUID() || String(idx)
+          }));
+          setRubricData(normalized);
           setView('result');
-          saveRubric(data, parsed);
+          saveRubric(data, normalized);
         } else {
-          throw new Error("Invalid rubric format received from AI");
+          throw new Error("I couldn't generate a valid rubric structure. Please try again with more detail.");
         }
       } else {
         throw new Error(response.error || "Failed to contact AI agent");
@@ -61,6 +70,8 @@ export function HomePage() {
       console.error("Generation error:", err);
       toast.error(err instanceof Error ? err.message : "Generation failed. Please try again.");
       setView('form');
+    } finally {
+      setIsGenerating(false);
     }
   }, [saveRubric]);
   const handleLoad = useCallback((rubric: SavedRubric) => {
@@ -122,7 +133,7 @@ export function HomePage() {
                   Transform assignment descriptions into professional pedagogical roadmaps instantly.
                 </p>
               </div>
-              <RubricForm onSubmit={handleGenerate} isLoading={false} />
+              <RubricForm onSubmit={handleGenerate} isLoading={isGenerating} />
             </motion.div>
           )}
           {view === 'loading' && (
