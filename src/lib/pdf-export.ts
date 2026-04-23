@@ -13,7 +13,7 @@ export const exportRubricToPDF = (data: RubricRow[], metadata: RubricFormData) =
     ? metadata.assignmentName.substring(0, 47) + '...'
     : metadata.assignmentName;
   doc.setFontSize(22);
-  doc.setTextColor(79, 70, 229); // Brand Indigo
+  doc.setTextColor(14, 164, 206);
   doc.text(titleText, 14, 20);
   doc.setFontSize(10);
   doc.setTextColor(100);
@@ -47,7 +47,7 @@ export const exportRubricToPDF = (data: RubricRow[], metadata: RubricFormData) =
     body: body,
     theme: 'grid',
     headStyles: {
-      fillColor: [79, 70, 229],
+      fillColor: [14, 164, 206],
       textColor: 255,
       fontSize: 10,
       fontStyle: 'bold',

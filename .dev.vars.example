@@ -1,5 +1,5 @@
-# Local-only secrets for Wrangler development
-# Copy to .dev.vars and fill in real values.
+# Legacy Cloudflare worker secrets
+# Copy to .dev.vars only if you are intentionally using the legacy Wrangler/worker path.
 ANTHROPIC_API_KEY=your-anthropic-api-key
 GEMINI_API_KEY=your-gemini-api-key
 # Optional existing keys used by this project:

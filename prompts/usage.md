@@ -2,51 +2,48 @@
 
 You can start customizing the template frontend by modifying `src/pages/HomePage.tsx`. The page auto-updates as you edit the file.
 
-The chat API is powered by Cloudflare Agents (Which is a wrapper on Durable Objects) and accessible through the worker at `/api/chat/:sessionId/*` routes defined in `worker/userRoutes.ts`. **Use it!**
+The active chat API is powered by the Node/Express backend in `server/index.js` and exposed at `/api/chat/:sessionId/*`. Use that path for the current app flow.
 
-The agent system uses Durable Objects for persistent state management and conversation history. `/api/chat/:sessionId/*` should be used without modifications for any conversation support. There is also a control plane durable object for session management name AppController.
+The current app stores session state in the server process. Legacy Cloudflare Durable Object code still exists in `worker/`, but it is not the primary runtime path for this project anymore.
 
 There are already several models presupplied with the template along with proper configuration (apikeys and base url). You should develop using them instead of adding mock methods.
 
 - Built with:
   * **React + Vite** for fast frontend development with hot module replacement
-  * **Cloudflare Agents SDK** for stateful agent management with persistent Durable Objects
+  * **Express** for the active backend API
   * **Model Context Protocol (MCP)** client for real server integration
-  * **OpenAI SDK** for AI model integration via Cloudflare AI Gateway
-  * **Production MCP Servers** including Cloudflare Bindings and Observability
+  * **OpenAI SDK** for Gemini integration through the OpenAI-compatible endpoint
   * **Tailwind CSS** for utility-first styling with glass morphism effects
   * **Framer Motion** for smooth chat animations and loading states
   * **Lucide Icons** (React) for modern, consistent iconography
   * **Shadcn/UI** (v2.3.0) for accessible chat components built on Radix UI primitives
   * **TypeScript** for type safety and extensible architecture
-  * **Durable Objects** for control plane for database or session management
+  * **Zustand** for persisted client-side rubric state
 
 - Agent Features:
   * **Real MCP Integration**: Connects to actual MCP servers, not simulated implementations
-  * **Cloudflare MCP Servers**: Direct integration with Cloudflare Bindings and Observability servers
   * **Intelligent Tool Usage**: AI automatically detects when to use tools (D1, R2, Workers, Web browsing)
-  * **Multi-Model Support**: Switch between various models
-  * **Production Tools**: Query D1 databases, manage R2 buckets, get Worker analytics
-  * **Web Browsing**: Browse and extract content from web pages through MCP server
-  * **Persistent Conversations**: Maintains chat history using Durable Objects state in Cloudflare Agents.
+  * **Gemini-First Generation**: The current UI and backend flow use Gemini as the primary provider
+  * **Editable Rubrics**: Generated rubric content can be revised before export
+  * **PDF Export**: Export branded rubric PDFs from the frontend
   * **Tool Visualization**: Shows which tools were used with results in the chat interface
 
 - Adding New MCP Servers:
-  * **Step 1**: Add server configuration to `initializeCloudflareServers()` in `worker/mcp-client.ts`
+  * **Step 1**: Decide whether the MCP integration belongs in the active Express backend or the legacy worker path
   * **Step 2**: Tools are automatically discovered and registered from MCP server definitions
   * **Step 3**: The system automatically routes tool calls to appropriate MCP servers
   * **Real Protocol**: Uses actual MCP protocol for server communication, not simulation
 
 - Environment Variables:
-  * **CF_AI_BASE_URL**: Cloudflare AI Gateway base URL (required)
-  * **CF_AI_API_KEY**: API key for AI Gateway access (required)
-  * **CHAT_AGENT**: Durable Object binding name for agent persistence
+  * **GEMINI_API_KEY**: Gemini API key for rubric generation (required)
+  * **VITE_API_BASE_URL**: Frontend API base URL (required for local split-port development)
+  * **ANTHROPIC_API_KEY**: Optional, retained in code but not required for the Gemini-only flow
 
 - Restrictions:
-  * **Environment variables**: CF_AI_BASE_URL and CF_AI_API_KEY must be configured
-  * **API keys**: Never expose API keys to client-side - they're server-side only in worker
+  * **Environment variables**: GEMINI_API_KEY must be configured
+  * **API keys**: Never expose API keys to the client; keep them on the Node server only
   * **Tool Safety**: Tool functions should validate inputs and handle errors gracefully
-  * **Use Agents SDK patterns**: Extend Agent class, use setState for persistence
+  * **Do not regress the active Express runtime** while changing legacy worker code
 
 - Styling:
   * Must generate **fully responsive** and beautiful UI with agent-focused design
@@ -66,15 +63,12 @@ There are already several models presupplied with the template along with proper
   * Animate tool usage indicators, model selection, and loading states
   * You can integrate variants and transitions using Tailwind utility classes alongside motion props
 
-- Worker Architecture (Backend, APIs):
-  * **`worker/agent.ts`**: Main agent class 
-  * **`worker/userRoutes.ts`**: HTTP routing for agent API and session managementå
-  * **`worker/chat.ts`**: OpenAI integration and conversation logic  
-  * **`worker/mcp-client.ts`**: MCP client for real server integration
-  * **`worker/tools.ts`**: Tool routing and MCP server coordination
-  * **`worker/config.ts`**: Centralized configuration
-  * **`worker/types.ts`**: TypeScript interfaces and type definitions
-  * **`worker/app-controller.ts`**: Control plane durable object for session management
+- Backend Architecture (Active Path):
+  * **`server/index.js`**: Main Express API and provider routing
+  * **`src/lib/chat.ts`**: Frontend API client
+  * **`src/lib/pdf-export.ts`**: PDF export logic
+  * **`src/lib/store.ts`**: Persisted rubric workspace state
+  * **`worker/`**: Legacy Cloudflare implementation retained in repo, not primary runtime
 
 ---
 
@@ -82,11 +76,8 @@ There are already several models presupplied with the template along with proper
 - Conversations and persistence are already handled by the template. Utilize existing utilities and apis to build something greater.
 - For example, to build a chatgpt clone - You just need to build the frontend and use existing APIs without modifying them.
 
-# Available bindings:
-**Only The following bindings are to be used in the project! Do not use any other bindings or remove/replace any of the bindings**
-- `CHAT_AGENT`: A durable object binding for the chat agent, but can be extended and used for other agentic purposes
-- `APP_CONTROLLER`: A durable object binding for the app controller, but can be extended and used for other agentic purposes
-**IMPORTANT: You are NOT ALLOWED to edit/add/remove ANY worker bindings OR touch wrangler.jsonc/wrangler.toml. Build your application around what is already provided.**
+# Legacy Worker Note:
+Legacy Cloudflare bindings and `wrangler.jsonc` still exist in the repo, but they are no longer the primary app contract. Prefer the Express backend unless the task explicitly targets the legacy worker path.
 
 # IMPORTANT NOTE: You must inform the user that although this project has AI capaibilities, There is a limit on the number of requests that can be made to the AI servers across all user apps in a given time period.
 Add the above note in an appropriate and visible location in the app - like in the footer or in the chat interface or as a modal

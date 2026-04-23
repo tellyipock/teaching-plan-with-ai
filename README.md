@@ -1,39 +1,38 @@
-# RubricFlow
+# LinearEd
 
-An advanced AI-powered chat platform built on Cloudflare Workers, Cloudflare Agents (Durable Objects), and the Model Context Protocol (MCP). RubricFlow provides a production-ready foundation for building intelligent, stateful AI agents with built-in session management and real-time tool execution.
-
-[cloudflarebutton]
+LinearEd is an AI-powered teaching plan creator for teachers. The current application runs as a React frontend with a Node/Express API backend and supports Gemini-based rubric generation, editable rubric tables, session persistence, and PDF export.
 
 ## 🚀 Overview
 
-RubricFlow leverages the full power of the Cloudflare ecosystem to deliver a low-latency, scalable AI chat experience. Unlike stateless chat implementations, RubricFlow uses Durable Objects (via the Agents SDK) to maintain persistent conversation state and session memory directly at the edge.
+LinearEd helps teachers generate classroom-ready grading rubrics from assignment details, subject, grade level, tone, and formatting preferences. The active local and hosting-friendly runtime is a standard Node server, which makes it suitable for traditional hosts such as SiteGround.
+
+The repository still contains legacy Cloudflare worker code and related config under [worker/](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/worker) and [wrangler.jsonc](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/wrangler.jsonc), but that is no longer the primary app path.
 
 ### Key Features
 
--   **Stateful AI Agents**: Powered by `@cloudflare/agents` for persistent, consistent session handling.
--   **Multi-Model Support**: Integrated with OpenAI-compatible providers (Gemini, etc.) via Cloudflare AI Gateway.
--   **Tool Architecture**: Built-in support for custom tools and the Model Context Protocol (MCP) for extensible AI capabilities.
--   **Session Management**: A dedicated `AppController` Durable Object manages user sessions, titles, and history.
+-   **Gemini-First Rubric Generation**: Generates grading rubrics from assignment and classroom context.
+-   **Teacher Controls**: Adjust grade level, tone, rubric scale, temperature, and feedback detail.
+-   **Editable Workspace**: Refine rubric criteria and performance-level descriptions before exporting.
+-   **Session Management**: In-memory chat/session state for local and hosted app usage.
 -   **Modern Frontend**: A responsive React SPA built with Vite, Tailwind CSS, and Shadcn UI.
--   **Streaming Responses**: Real-time token streaming for a responsive user experience.
--   **Web Search Integration**: Native integration with SerpAPI for real-time web browsing capabilities.
+-   **PDF Export**: Exports branded rubric PDFs including assignment context.
 
 ## 🛠️ Tech Stack
 
--   **Runtime**: Cloudflare Workers
--   **State/Memory**: Cloudflare Durable Objects (Agents SDK)
+-   **Runtime**: Node.js + Express
 -   **Framework**: React 18 with Vite
--   **Routing**: Hono (Backend), React Router 6 (Frontend)
+-   **Routing**: Express (Backend), React Router 6 (Frontend)
 -   **Styling**: Tailwind CSS & Shadcn UI
--   **API**: OpenAI SDK (compatible with AI Gateway)
--   **Package Manager**: Bun
+-   **AI Providers**: Gemini via the OpenAI-compatible SDK, optional Anthropic support retained in code
+-   **Package Manager**: npm
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have:
-1.  A [Cloudflare Account](https://dash.cloudflare.com/)
-2.  [Bun](https://bun.sh/) installed on your machine
-3.  Optional: A [SerpAPI Key](https://serpapi.com/) for web search capabilities
+1.  Node.js 18+
+2.  npm
+3.  A Gemini API key
+4.  Optional: An Anthropic API key if you want to keep Claude available for future use
 
 ## ⚙️ Getting Started
 
@@ -42,95 +41,77 @@ Before you begin, ensure you have:
 ```bash
 # Clone the repository (replace with your URL)
 git clone <your-repo-url>
-cd rubricflow
+cd lineared
 
 # Install dependencies
-bun install
+npm install
 ```
 
 ### 2. Configuration
 
-Edit `wrangler.jsonc` to configure your environment variables and Cloudflare account details:
-
-```jsonc
-{
-  "vars": {
-    "CF_AI_BASE_URL": "https://gateway.ai.cloudflare.com/v1/YOUR_ACCOUNT_ID/YOUR_GATEWAY_ID/openai",
-    "CF_AI_API_KEY": "your-cloudflare-api-key",
-    "SERPAPI_KEY": "your-serpapi-key" // Optional
-  }
-}
-```
-
-### 2.1 Secret Management (Recommended)
-
-Do not store real provider API keys in `wrangler.jsonc`.
-
-Use Wrangler secrets for deployed environments:
-
-```bash
-wrangler secret put ANTHROPIC_API_KEY
-```
-
-For local development, copy `.dev.vars.example` to `.dev.vars` and set your local secret values there.
-
-```bash
-cp .dev.vars.example .dev.vars
-```
-
-Then edit `.dev.vars` and set:
+Copy [.env.example](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/.env.example) to `.env` and set your local values:
 
 ```dotenv
-ANTHROPIC_API_KEY=your-real-key
+GEMINI_API_KEY=your-real-key
+GEMINI_MODEL=gemini-2.5-flash
+VITE_API_BASE_URL=http://localhost:8787
+
+# Optional
+# ANTHROPIC_API_KEY=your-real-key
+# AI_DEFAULT_MODEL=gemini-2.5-flash
 ```
 
 ### 3. Local Development
 
-Start the development server (runs both the Vite frontend and the Worker backend via Wrangler):
+Start the development server (runs both the Vite frontend and the Express backend):
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 The application will be available at `http://localhost:3000`.
 
 ## 📂 Project Structure
 
--   `worker/`: The Cloudflare Worker source code.
-    -   `agent.ts`: The primary ChatAgent implementation using Agents SDK.
-    -   `app-controller.ts`: Global session and state management.
-    -   `chat.ts`: OpenAI integration and streaming logic.
-    -   `tools.ts`: Tool definitions and execution logic.
-    -   `userRoutes.ts`: Custom API endpoints.
--   `src/`: The React frontend application.
+-   `server/`: Primary Node/Express backend used for local development and traditional hosting.
+-   `src/`: React frontend application.
     -   `components/`: UI components and layout.
-    -   `lib/`: Chat service and utility functions.
+    -   `lib/`: Chat, export, and utility functions.
     -   `pages/`: Main application views.
+-   `worker/`: Legacy Cloudflare worker implementation retained in the repo but not used by the primary app flow.
+-   `src/`: The React frontend application.
 
 ## 🚢 Deployment
 
-Deploying to Cloudflare is seamless. You can deploy manually using the CLI or use the button below.
+The current recommended deployment target is any Node-compatible host that can run the Express server and serve the Vite build output.
 
-[cloudflarebutton]
-
-### Manual Deployment
+### Generic Node Deployment
 
 ```bash
-# Build the frontend and deploy the worker
-bun run deploy
+# Build the frontend
+npm run build
+
+# Start the API server
+npm run start
 ```
+
+Serve the contents of `dist/` with your host or reverse proxy, and proxy API traffic to the Node server.
+
+### Legacy Cloudflare Deployment
+
+Cloudflare-related files still exist in the repo, but they are now considered legacy/optional. If you intend to revive that path, review [worker/](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/worker), [wrangler.jsonc](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/wrangler.jsonc), and the related scripts in [package.json](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/package.json).
 
 ## 🔧 Extending the AI
 
 ### Adding Custom Tools
-You can add new tools to the AI in `worker/tools.ts`. Simply add a new tool definition to the `customTools` array and implement the logic in the `executeTool` function.
+You can extend rubric generation or add new AI workflows in [server/index.js](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/server/index.js) and the UI flows under [src/](c:/Users/linea/Documents/Dev/teaching-plan-with-ai/src).
 
 ### Adding MCP Servers
-RubricFlow is designed to work with Model Context Protocol servers. To add a new MCP server, update the `MCP_SERVERS` configuration in `worker/mcp-client.ts` with the appropriate SSE URL.
+Legacy MCP integration still exists in the worker code. If you want MCP in the current Node runtime, wire it into the Express backend instead of relying on the old worker-only path.
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
-*Built with ❤️ using Cloudflare Workers and Agents.*
+Built with a React frontend and a Node/Express backend.

@@ -14,7 +14,7 @@ dist/
 # Workspace file
 *.code-workspace
 
-# Local Worker secrets (Wrangler)
+# Local app and legacy worker secrets
 .dev.vars
 .env
 .env.local
