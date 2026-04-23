@@ -6,13 +6,13 @@
   :root {
     --background: 40 30% 98%;
     --foreground: 224 71% 4%;
-    --primary: 243 75% 59%;
+    --primary: 193 87% 43%;
     --primary-foreground: 0 0% 100%;
     --muted: 40 20% 94%;
     --muted-foreground: 220 10% 40%;
     --border: 24 15% 85%;
     --input: 24 15% 85%;
-    --ring: 243 75% 59%;
+    --ring: 193 87% 43%;
     --radius: 0.75rem;
   }
   body {
@@ -34,8 +34,8 @@
   }
   .grid-paper {
     background-image:
-      linear-gradient(rgba(79, 70, 229, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(79, 70, 229, 0.05) 1px, transparent 1px);
+      linear-gradient(rgba(14, 164, 206, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(14, 164, 206, 0.08) 1px, transparent 1px);
     background-size: 30px 30px;
   }
 }

@@ -10,9 +10,6 @@ export const MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
   { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Preview)' },
-  { id: 'claude-3-5-sonnet-latest', name: 'Claude 3.5 Sonnet' },
-  { id: 'claude-3-7-sonnet-latest', name: 'Claude 3.7 Sonnet' },
-  { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku' },
 ];
 
 class ChatService {
@@ -29,13 +26,14 @@ class ChatService {
   async sendMessage(
     message: string, 
     model?: string, 
-    onChunk?: (chunk: string) => void
+    onChunk?: (chunk: string) => void,
+    temperature?: number
   ): Promise<ChatResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, model, stream: !!onChunk }),
+        body: JSON.stringify({ message, model, stream: !!onChunk, temperature }),
       });
       
       if (!response.ok) {

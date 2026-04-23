@@ -65,15 +65,15 @@ export const useRubricStore = create<RubricStore>()(
     }),
     {
       name: 'lineared-storage-v2',
-      version: 2,
+      version: 4,
       partialize: (state) => ({
         savedRubrics: state.savedRubrics,
         currentRubricId: state.currentRubricId
       }),
       migrate: (persistedState: any, version: number) => {
         let state = persistedState as any;
-        if (version < 2) {
-          // Migration from initial beta schema to LinearEd production schema
+        if (version < 4) {
+          // Migration from older schemas to current metadata shape
           const rubrics = state?.savedRubrics || [];
           state = {
             ...state,
@@ -83,7 +83,9 @@ export const useRubricStore = create<RubricStore>()(
                 ...r.metadata,
                 teacherName: r.metadata?.teacherName ?? '',
                 tone: r.metadata?.tone ?? 'Balanced',
-                gradeLevel: r.metadata?.gradeLevel ?? '9th'
+                gradeLevel: r.metadata?.gradeLevel ?? '9th',
+                temperature: typeof r.metadata?.temperature === 'number' ? r.metadata.temperature : 0.3,
+                feedbackDetail: typeof r.metadata?.feedbackDetail === 'number' ? r.metadata.feedbackDetail : 3,
               }
             }))
           };

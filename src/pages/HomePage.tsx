@@ -26,8 +26,11 @@ export function HomePage() {
     setView('loading');
     setIsGenerating(true);
     const teacherContext = data.teacherName ? `Teacher: ${data.teacherName}. ` : "";
+    const detailLabels = ['concise', 'compact', 'balanced', 'expanded', 'detailed'];
+    const targetWords = Math.max(10, Math.min(50, data.feedbackDetail * 10));
     const prompt = `Generate a high-school level pedagogical grading rubric for: ${data.assignmentName} in ${data.subject} for the ${data.gradeLevel} Grade level.
     ${teacherContext}Tone: ${data.tone}. Scale: ${data.scale} levels.
+    Feedback Detail: ${detailLabels[data.feedbackDetail - 1]} (${data.feedbackDetail}/5). Aim for about ${targetWords} words per level description (roughly 10 to 50 words).
     Context: ${data.context}
     CRITICAL: Return ONLY a raw JSON array of objects. No preamble. No markdown code blocks.
     Example format:
@@ -36,7 +39,7 @@ export function HomePage() {
     ]
     Ensure exact scale matches: each object must have "levels" array of length ${data.scale}. Ensure the vocabulary and depth are appropriate for a ${data.gradeLevel} Grade student.`;
     try {
-      const response = await chatService.sendMessage(prompt);
+      const response = await chatService.sendMessage(prompt, undefined, undefined, data.temperature);
       if (response.success) {
         const raw = response.data?.messages[response.data.messages.length - 1]?.content || "";
         let parsed: RubricRow[] | null = null;

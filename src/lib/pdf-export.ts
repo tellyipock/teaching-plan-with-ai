@@ -7,6 +7,7 @@ export const exportRubricToPDF = (data: RubricRow[], metadata: RubricFormData) =
   const doc = new jsPDF('l', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - 28;
   // Header Styling
   const titleText = metadata.assignmentName.length > 50
     ? metadata.assignmentName.substring(0, 47) + '...'
@@ -21,13 +22,27 @@ export const exportRubricToPDF = (data: RubricRow[], metadata: RubricFormData) =
     metaLine = `Teacher: ${metadata.teacherName} | ` + metaLine;
   }
   doc.text(metaLine, 14, 28);
+
+  let tableStartY = 35;
+  const context = metadata.context?.trim();
+  if (context) {
+    doc.setFontSize(9);
+    doc.setTextColor(70);
+    doc.text('Assignment Context:', 14, 34);
+
+    doc.setFontSize(8.5);
+    const wrappedContext = doc.splitTextToSize(context, contentWidth);
+    doc.text(wrappedContext, 14, 39);
+    tableStartY = 39 + (wrappedContext.length * 4.2) + 4;
+  }
+
   const headers = [['Criterion', ...Array.from({ length: metadata.scale }, (_, i) => `Level ${metadata.scale - i}`)]];
   const body = data.map(row => [
     row.criterion,
     ...row.levels
   ]);
   autoTable(doc, {
-    startY: 35,
+    startY: tableStartY,
     head: headers,
     body: body,
     theme: 'grid',

@@ -21,12 +21,15 @@ const SUBJECT_OPTIONS = [
   "Physical Science"
 ];
 const GRADE_LEVELS = ["9th", "10th", "11th", "12th"];
+const FEEDBACK_DETAIL_LABELS = ['Concise', 'Compact', 'Balanced', 'Expanded', 'Detailed'];
 const formSchema = z.object({
   assignmentName: z.string().min(3, "Title is too short"),
   teacherName: z.string().optional(),
   subject: z.string().min(2, "Subject is required"),
   gradeLevel: z.string(),
   scale: z.number().min(3).max(5),
+  temperature: z.number().min(0).max(1),
+  feedbackDetail: z.number().min(1).max(5),
   context: z.string().min(20, "Please provide more context for the AI"),
   tone: z.enum(['Encouraging', 'Academic', 'Strict', 'Balanced', 'Casual & Friendly']),
 });
@@ -44,6 +47,8 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
       subject: '',
       gradeLevel: '9th',
       scale: 4,
+      temperature: 0.3,
+      feedbackDetail: 3,
       context: '',
       tone: 'Balanced',
     }
@@ -134,6 +139,38 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
                   <SelectItem value="Balanced">Balanced</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Creativity (Temperature)</Label>
+                <span className="text-sm font-bold text-primary">{form.watch('temperature').toFixed(1)}</span>
+              </div>
+              <Slider
+                value={[form.watch('temperature')]}
+                onValueChange={([v]) => form.setValue('temperature', Number(v.toFixed(1)))}
+                min={0}
+                max={1}
+                step={0.1}
+              />
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Feedback Detail</Label>
+                <span className="text-sm font-bold text-primary">
+                  {FEEDBACK_DETAIL_LABELS[form.watch('feedbackDetail') - 1]} ({10 * form.watch('feedbackDetail')} words)
+                </span>
+              </div>
+              <Slider
+                value={[form.watch('feedbackDetail')]}
+                onValueChange={([v]) => form.setValue('feedbackDetail', v)}
+                min={1}
+                max={5}
+                step={1}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>Concise</span>
+                <span>Detailed</span>
+              </div>
             </div>
           </div>
         </SketchyCard>

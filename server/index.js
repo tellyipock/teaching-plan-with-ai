@@ -177,7 +177,7 @@ function generateSessionTitle(firstMessage) {
   return `${truncated} • ${dateTime}`;
 }
 
-async function createAnthropicText({ model, history, message, stream, onChunk }) {
+async function createAnthropicText({ model, history, message, stream, onChunk, temperature }) {
   if (!anthropic) {
     throw new Error('ANTHROPIC_API_KEY is missing. Set it in your environment.');
   }
@@ -185,6 +185,7 @@ async function createAnthropicText({ model, history, message, stream, onChunk })
   const payload = {
     model,
     max_tokens: 16000,
+    ...(typeof temperature === 'number' ? { temperature } : {}),
     system:
       'You are a helpful AI assistant that helps users build and deploy web applications. You provide clear, concise guidance on development, deployment, and troubleshooting. Keep responses practical and actionable.',
     messages: toAnthropicMessages(history, message),
@@ -212,13 +213,22 @@ async function createAnthropicText({ model, history, message, stream, onChunk })
   }, 'Anthropic');
 }
 
-async function createGeminiText({ model, history, message, stream, onChunk }) {
+function normalizeTemperature(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return undefined;
+  }
+
+  return Math.max(0, Math.min(1, value));
+}
+
+async function createGeminiText({ model, history, message, stream, onChunk, temperature }) {
   if (!gemini) {
     throw new Error('GEMINI_API_KEY is missing. Set it in your environment.');
   }
 
   const payload = {
     model,
+    ...(typeof temperature === 'number' ? { temperature } : {}),
     messages: toGeminiMessages(history, message),
   };
 
@@ -241,7 +251,7 @@ async function createGeminiText({ model, history, message, stream, onChunk }) {
   }, 'Gemini');
 }
 
-async function createTextWithProvider({ model, history, message, stream, onChunk }) {
+async function createTextWithProvider({ model, history, message, stream, onChunk, temperature }) {
   if (isGeminiModel(model)) {
     const fallbackModels = getGeminiFallbackModels(model);
     let lastError;
@@ -258,6 +268,7 @@ async function createTextWithProvider({ model, history, message, stream, onChunk
           message,
           stream,
           onChunk,
+          temperature,
         });
       } catch (error) {
         lastError = error;
@@ -270,22 +281,8 @@ async function createTextWithProvider({ model, history, message, stream, onChunk
     throw lastError;
   }
 
-  try {
-    return await createAnthropicText({ model, history, message, stream, onChunk });
-  } catch (error) {
-    if (!gemini || !shouldFallbackToGemini(error)) {
-      throw error;
-    }
-
-    console.warn('Anthropic request failed. Falling back to Gemini model:', DEFAULT_GEMINI_MODEL);
-    return createGeminiText({
-      model: DEFAULT_GEMINI_MODEL,
-      history,
-      message,
-      stream,
-      onChunk,
-    });
-  }
+  // Non-Gemini (Claude) model path — only reached if user explicitly selects a Claude model
+  return createAnthropicText({ model, history, message, stream, onChunk, temperature });
 }
 
 app.get('/api/health', (_req, res) => {
@@ -331,7 +328,8 @@ app.delete('/api/chat/:sessionId/clear', (req, res) => {
 app.post('/api/chat/:sessionId/chat', async (req, res) => {
   const sessionId = req.params.sessionId;
   const state = getSession(sessionId);
-  const { message, model, stream } = req.body || {};
+  const { message, model, stream, temperature } = req.body || {};
+  const normalizedTemperature = normalizeTemperature(temperature);
 
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ success: false, error: 'Message required' });
@@ -358,6 +356,7 @@ app.post('/api/chat/:sessionId/chat', async (req, res) => {
         message: message.trim(),
         stream: true,
         onChunk: (chunk) => res.write(chunk),
+        temperature: normalizedTemperature,
       });
 
       const assistantMessage = createMessage('assistant', content || 'I could not generate a response.');
@@ -374,6 +373,7 @@ app.post('/api/chat/:sessionId/chat', async (req, res) => {
       message: message.trim(),
       stream: false,
       onChunk: () => {},
+      temperature: normalizedTemperature,
     });
 
     const assistantMessage = createMessage('assistant', content || 'I could not generate a response.');
