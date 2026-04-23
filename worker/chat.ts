@@ -1,7 +1,8 @@
+import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import type { Message, ToolCall } from './types';
 import { getToolDefinitions, executeTool } from './tools';
-import { ChatCompletionMessageFunctionToolCall } from 'openai/resources/index.mjs';
+import type { ChatCompletionMessageFunctionToolCall } from 'openai/resources/index.mjs';
 
 /**
  * ChatHandler - Handles all chat-related operations
@@ -10,15 +11,22 @@ import { ChatCompletionMessageFunctionToolCall } from 'openai/resources/index.mj
  * making it easy for AI developers to understand and extend the functionality.
  */
 export class ChatHandler {
-  private client: OpenAI;
+  private openAiClient?: OpenAI;
+  private anthropicClient?: Anthropic;
   private model: string;
 
-  constructor(aiGatewayUrl: string, apiKey: string, model: string) {
-    this.client = new OpenAI({ 
-      baseURL: aiGatewayUrl,
-      apiKey: apiKey
-    });
-    console.log("BASE URL", aiGatewayUrl);
+  constructor(aiGatewayUrl: string, apiKey: string, model: string, anthropicApiKey?: string) {
+    if (aiGatewayUrl && apiKey) {
+      this.openAiClient = new OpenAI({
+        baseURL: aiGatewayUrl,
+        apiKey,
+      });
+    }
+
+    if (anthropicApiKey) {
+      this.anthropicClient = new Anthropic({ apiKey: anthropicApiKey });
+    }
+
     this.model = model;
   }
 
@@ -33,12 +41,93 @@ export class ChatHandler {
     content: string;
     toolCalls?: ToolCall[];
   }> {
+    if (this.isAnthropicModel(this.model)) {
+      return this.processAnthropicMessage(message, conversationHistory, onChunk);
+    }
+
+    if (!this.openAiClient) {
+      throw new Error('OpenAI-compatible client is not configured.');
+    }
+
+    return this.processOpenAIMessage(message, conversationHistory, onChunk);
+  }
+
+  private isAnthropicModel(model: string): boolean {
+    return model.startsWith('claude-');
+  }
+
+  private async processAnthropicMessage(
+    message: string,
+    conversationHistory: Message[],
+    onChunk?: (chunk: string) => void
+  ): Promise<{
+    content: string;
+    toolCalls?: ToolCall[];
+  }> {
+    if (!this.anthropicClient) {
+      throw new Error('ANTHROPIC_API_KEY is not configured in the Worker environment.');
+    }
+
+    const messages = this.buildAnthropicMessages(message, conversationHistory);
+
+    if (onChunk) {
+      const stream = await this.anthropicClient.messages.create({
+        model: this.model,
+        max_tokens: 16000,
+        system:
+          'You are a helpful AI assistant that helps users build and deploy web applications. You provide clear, concise guidance on development, deployment, and troubleshooting. Keep responses practical and actionable.',
+        messages,
+        stream: true,
+      });
+
+      let fullContent = '';
+
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          fullContent += event.delta.text;
+          onChunk(event.delta.text);
+        }
+      }
+
+      return {
+        content: fullContent || 'I apologize, but I encountered an issue processing your request.',
+      };
+    }
+
+    const completion = await this.anthropicClient.messages.create({
+      model: this.model,
+      max_tokens: 16000,
+      system:
+        'You are a helpful AI assistant that helps users build and deploy web applications. You provide clear, concise guidance on development, deployment, and troubleshooting. Keep responses practical and actionable.',
+      messages,
+    });
+
+    const content = completion.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('')
+      .trim();
+
+    return {
+      content: content || 'I apologize, but I encountered an issue processing your request.',
+    };
+  }
+
+  private async processOpenAIMessage(
+    message: string,
+    conversationHistory: Message[],
+    onChunk?: (chunk: string) => void
+  ): Promise<{
+    content: string;
+    toolCalls?: ToolCall[];
+  }> {
+    const client = this.openAiClient!;
     const messages = this.buildConversationMessages(message, conversationHistory);
     const toolDefinitions = await getToolDefinitions();
     
     if (onChunk) {
       // Use streaming with callback
-      const stream = await this.client.chat.completions.create({
+      const stream = await client.chat.completions.create({
         model: this.model,
         messages,
         tools: toolDefinitions,
@@ -52,7 +141,7 @@ export class ChatHandler {
     }
 
     // Non-streaming response
-    const completion = await this.client.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: this.model,
       messages,
       tools: toolDefinitions,
@@ -186,7 +275,12 @@ export class ChatHandler {
     openAiToolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[], 
     toolResults: ToolCall[]
   ): Promise<string> {
-    const followUpCompletion = await this.client.chat.completions.create({
+    const client = this.openAiClient;
+    if (!client) {
+      throw new Error('OpenAI-compatible client is not configured.');
+    }
+
+    const followUpCompletion = await client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: 'You are a helpful AI assistant. Respond naturally to the tool results.' },
@@ -224,6 +318,18 @@ export class ChatHandler {
       })),
       { role: 'user' as const, content: userMessage }
     ];
+  }
+
+  private buildAnthropicMessages(userMessage: string, history: Message[]) {
+    const normalized = history
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .slice(-5)
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+    return [...normalized, { role: 'user' as const, content: userMessage }];
   }
 
   /**

@@ -2,9 +2,14 @@
 import { defineConfig, loadEnv } from "vite";
 import path from "path";
 import react from "@vitejs/plugin-react";
-import { exec } from "node:child_process";
+import { File as NodeFile } from "node:buffer";
+import fs from "node:fs";
 import pino from "pino";
-import { cloudflare } from "@cloudflare/vite-plugin";
+
+// Node 18 does not provide a global File, but some worker tooling expects it.
+if (typeof globalThis.File === "undefined") {
+  (globalThis as typeof globalThis & { File: typeof NodeFile }).File = NodeFile;
+}
 
 const logger = pino();
 
@@ -68,16 +73,12 @@ function watchDependenciesPlugin() {
             )}. Clearing caches...`
           );
 
-          exec(
-            "rm -f .eslintcache tsconfig.tsbuildinfo",
-            (err, stdout, stderr) => {
-              if (err) {
-                console.error("Failed to clear caches:", stderr);
-                return;
-              }
-              console.log("Caches cleared successfully.\n");
+          for (const cacheFile of [".eslintcache", "tsconfig.tsbuildinfo"]) {
+            if (fs.existsSync(cacheFile)) {
+              fs.rmSync(cacheFile, { force: true });
             }
-          );
+          }
+          console.log("Caches cleared successfully.\n");
         }
       });
     },
@@ -102,10 +103,20 @@ function reloadTriggerPlugin() {
 }
 
 // https://vite.dev/config/
-export default ({ mode }: { mode: string }) => {
+export default async ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, process.cwd());
+  const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
+  const plugins = [react(), watchDependenciesPlugin(), reloadTriggerPlugin()];
+
+  if (nodeMajor >= 20) {
+    const { cloudflare } = await import("@cloudflare/vite-plugin");
+    plugins.splice(1, 0, cloudflare());
+  } else {
+    logger.warn("Skipping @cloudflare/vite-plugin because Node 20+ is required.");
+  }
+
   return defineConfig({
-    plugins: [react(), cloudflare(), watchDependenciesPlugin(), reloadTriggerPlugin()],
+    plugins,
     build: {
       minify: true,
       sourcemap: "inline", // Use inline source maps for better error reporting

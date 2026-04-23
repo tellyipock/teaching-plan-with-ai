@@ -81,8 +81,9 @@ export function HomePage() {
         throw new Error(response.error || "Failed to connect to the AI Architect.");
       }
     } catch (err) {
-      console.error("Generation error:", err);
-      toast.error(err instanceof Error ? err.message : "Generation failed. Please check your connection and try again.");
+      const message = err instanceof Error ? err.message : "Generation failed. Please check your connection and try again.";
+      console.error("Generation error:", message);
+      toast.error(message);
       setView('form');
     } finally {
       setIsGenerating(false);

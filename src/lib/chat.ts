@@ -7,18 +7,20 @@ export interface ChatResponse {
 }
 
 export const MODELS = [
-  { id: 'google-ai-studio/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-  { id: 'google-ai-studio/gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-  { id: 'google-ai-studio/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+  { id: 'claude-3-5-sonnet-latest', name: 'Claude 3.5 Sonnet' },
+  { id: 'claude-3-7-sonnet-latest', name: 'Claude 3.7 Sonnet' },
+  { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku' },
 ];
 
 class ChatService {
   private sessionId: string;
   private baseUrl: string;
+  private apiBaseUrl: string;
 
   constructor() {
     this.sessionId = crypto.randomUUID();
-    this.baseUrl = `/api/chat/${this.sessionId}`;
+    this.apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    this.baseUrl = `${this.apiBaseUrl}/api/chat/${this.sessionId}`;
   }
 
   async sendMessage(
@@ -34,7 +36,29 @@ class ChatService {
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        let details = `HTTP ${response.status}`;
+        try {
+          const cloned = response.clone();
+          const json = await cloned.json();
+          if (json && typeof json.error === 'string' && json.error.trim()) {
+            details = json.error;
+          }
+        } catch {
+          try {
+            const text = await response.text();
+            if (text && text.trim()) {
+              details = text;
+            }
+          } catch {
+            // Fall back to the HTTP status message above.
+          }
+        }
+
+        if (details.includes('credit balance is too low')) {
+          throw new Error('Your Anthropic account does not have enough credits. Please add credits, then try again.');
+        }
+
+        throw new Error(details);
       }
 
       if (onChunk && response.body) {
@@ -64,8 +88,9 @@ class ChatService {
       // Non-streaming response
       return await response.json();
     } catch (error) {
-      console.error('Failed to send message:', error);
-      return { success: false, error: 'Failed to send message' };
+      const message = error instanceof Error ? error.message : 'Failed to send message';
+      console.error('Failed to send message:', message);
+      return { success: false, error: message };
     }
   }
 
@@ -107,18 +132,18 @@ class ChatService {
 
   newSession(): void {
     this.sessionId = crypto.randomUUID();
-    this.baseUrl = `/api/chat/${this.sessionId}`;
+    this.baseUrl = `${this.apiBaseUrl}/api/chat/${this.sessionId}`;
   }
 
   switchSession(sessionId: string): void {
     this.sessionId = sessionId;
-    this.baseUrl = `/api/chat/${sessionId}`;
+    this.baseUrl = `${this.apiBaseUrl}/api/chat/${sessionId}`;
   }
 
   // Session Management Methods
   async createSession(title?: string, sessionId?: string, firstMessage?: string): Promise<{ success: boolean; data?: { sessionId: string; title: string }; error?: string }> {
     try {
-      const response = await fetch('/api/sessions', {
+      const response = await fetch(`${this.apiBaseUrl}/api/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, sessionId, firstMessage })
@@ -131,7 +156,7 @@ class ChatService {
 
   async listSessions(): Promise<{ success: boolean; data?: SessionInfo[]; error?: string }> {
     try {
-      const response = await fetch('/api/sessions');
+      const response = await fetch(`${this.apiBaseUrl}/api/sessions`);
       return await response.json();
     } catch (error) {
       return { success: false, error: 'Failed to list sessions' };
@@ -140,7 +165,7 @@ class ChatService {
 
   async deleteSession(sessionId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+      const response = await fetch(`${this.apiBaseUrl}/api/sessions/${sessionId}`, { method: 'DELETE' });
       return await response.json();
     } catch (error) {
       return { success: false, error: 'Failed to delete session' };
@@ -149,7 +174,7 @@ class ChatService {
 
   async updateSessionTitle(sessionId: string, title: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/title`, {
+      const response = await fetch(`${this.apiBaseUrl}/api/sessions/${sessionId}/title`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title })
@@ -162,7 +187,7 @@ class ChatService {
 
   async clearAllSessions(): Promise<{ success: boolean; data?: { deletedCount: number }; error?: string }> {
     try {
-      const response = await fetch('/api/sessions', { method: 'DELETE' });
+      const response = await fetch(`${this.apiBaseUrl}/api/sessions`, { method: 'DELETE' });
       return await response.json();
     } catch (error) {
       return { success: false, error: 'Failed to clear all sessions' };

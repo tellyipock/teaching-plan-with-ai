@@ -1,0 +1,7 @@
+# Local-only secrets for Wrangler development
+# Copy to .dev.vars and fill in real values.
+ANTHROPIC_API_KEY=your-anthropic-api-key
+# Optional existing keys used by this project:
+# CF_AI_BASE_URL=https://gateway.ai.cloudflare.com/v1/YOUR_ACCOUNT_ID/YOUR_GATEWAY_ID/openai
+# CF_AI_API_KEY=your-cloudflare-api-key
+# SERPAPI_KEY=your-serpapi-key

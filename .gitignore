@@ -1,3 +1,21 @@
 
 # Bootstrap marker
 .bootstrap-complete
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Editor settings
+.vscode/
+
+# Workspace file
+*.code-workspace
+
+# Local Worker secrets (Wrangler)
+.dev.vars
+.env
+.env.local
+.env.*

@@ -62,6 +62,28 @@ Edit `wrangler.jsonc` to configure your environment variables and Cloudflare acc
 }
 ```
 
+### 2.1 Secret Management (Recommended)
+
+Do not store real provider API keys in `wrangler.jsonc`.
+
+Use Wrangler secrets for deployed environments:
+
+```bash
+wrangler secret put ANTHROPIC_API_KEY
+```
+
+For local development, copy `.dev.vars.example` to `.dev.vars` and set your local secret values there.
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+Then edit `.dev.vars` and set:
+
+```dotenv
+ANTHROPIC_API_KEY=your-real-key
+```
+
 ### 3. Local Development
 
 Start the development server (runs both the Vite frontend and the Worker backend via Wrangler):

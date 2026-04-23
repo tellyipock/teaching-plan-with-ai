@@ -11,7 +11,7 @@ import type { ChatState, Message } from '../../worker/types'
 export const HAS_TEMPLATE_DEMO = true
 
 export function TemplateDemo() {
-  const [model, setModel] = useState(MODELS[0]?.id ?? 'google-ai-studio/gemini-2.0-flash')
+  const [model, setModel] = useState(MODELS[0]?.id ?? 'claude-3-5-sonnet-latest')
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)

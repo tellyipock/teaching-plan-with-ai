@@ -18,7 +18,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
     messages: [],
     sessionId: crypto.randomUUID(),
     isProcessing: false,
-    model: 'google-ai-studio/gemini-2.5-flash'
+    model: 'claude-3-5-sonnet-latest'
   };
 
   /**
@@ -28,7 +28,8 @@ export class ChatAgent extends Agent<Env, ChatState> {
     this.chatHandler = new ChatHandler(
       this.env.CF_AI_BASE_URL ,
       this.env.CF_AI_API_KEY,
-      this.state.model
+      this.state.model,
+      this.env.ANTHROPIC_API_KEY
     );
     
     console.log(`ChatAgent ${this.name} initialized with session ${this.state.sessionId}`);
