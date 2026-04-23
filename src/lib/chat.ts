@@ -7,6 +7,9 @@ export interface ChatResponse {
 }
 
 export const MODELS = [
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Preview)' },
   { id: 'claude-3-5-sonnet-latest', name: 'Claude 3.5 Sonnet' },
   { id: 'claude-3-7-sonnet-latest', name: 'Claude 3.7 Sonnet' },
   { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku' },
@@ -88,7 +91,11 @@ class ChatService {
       // Non-streaming response
       return await response.json();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send message';
+      let message = error instanceof Error ? error.message : 'Failed to send message';
+      if (message === 'Failed to fetch') {
+        const apiOrigin = this.apiBaseUrl || window.location.origin;
+        message = `Cannot reach API at ${apiOrigin}. Make sure the backend is running on http://localhost:8787.`;
+      }
       console.error('Failed to send message:', message);
       return { success: false, error: message };
     }

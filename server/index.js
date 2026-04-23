@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -18,7 +19,8 @@ for (const envFile of ['.env', '.env.local', '.dev.vars']) {
 }
 
 const PORT = Number(process.env.API_PORT || 8787);
-const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest';
+const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 const app = express();
 app.use(cors());
@@ -30,6 +32,16 @@ const sessions = new Map();
 
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const anthropic = anthropicApiKey ? new Anthropic({ apiKey: anthropicApiKey }) : null;
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const geminiBaseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai';
+const gemini = geminiApiKey
+  ? new OpenAI({
+      apiKey: geminiApiKey,
+      baseURL: geminiBaseURL,
+    })
+  : null;
+
+const DEFAULT_MODEL = process.env.AI_DEFAULT_MODEL || (gemini ? DEFAULT_GEMINI_MODEL : DEFAULT_ANTHROPIC_MODEL);
 
 function createMessage(role, content, toolCalls) {
   return {
@@ -64,6 +76,89 @@ function toAnthropicMessages(history, userMessage) {
   return [...normalized, { role: 'user', content: userMessage }];
 }
 
+function toGeminiMessages(history, userMessage) {
+  const normalized = history
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .slice(-8)
+    .map((m) => ({ role: m.role, content: m.content }));
+
+  return [...normalized, { role: 'user', content: userMessage }];
+}
+
+function isGeminiModel(model) {
+  return typeof model === 'string' && model.toLowerCase().startsWith('gemini');
+}
+
+function getErrorMessage(error) {
+  if (!error) return 'Unknown error';
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function isRetryableProviderError(error) {
+  const message = getErrorMessage(error).toLowerCase();
+  const status = typeof error?.status === 'number' ? error.status : undefined;
+
+  if (status && (status === 429 || status >= 500)) {
+    return true;
+  }
+
+  return (
+    message.includes('503') ||
+    message.includes('status code (no body)') ||
+    message.includes('temporarily unavailable') ||
+    message.includes('timeout') ||
+    message.includes('timed out') ||
+    message.includes('econnreset') ||
+    message.includes('fetch failed') ||
+    message.includes('network')
+  );
+}
+
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withProviderRetry(fn, label, maxAttempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableProviderError(error) || attempt === maxAttempts) {
+        break;
+      }
+
+      const delayMs = 600 * Math.pow(2, attempt - 1);
+      console.warn(`${label} transient error (attempt ${attempt}/${maxAttempts}): ${getErrorMessage(error)}. Retrying in ${delayMs}ms.`);
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError;
+}
+
+function shouldFallbackToGemini(error) {
+  const msg = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase();
+  return (
+    msg.includes('credit balance is too low') ||
+    msg.includes('insufficient') ||
+    msg.includes('anthropic_api_key is missing')
+  );
+}
+
+function getGeminiFallbackModels(preferredModel) {
+  const candidates = [
+    preferredModel,
+    DEFAULT_GEMINI_MODEL,
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+  ].filter((m) => typeof m === 'string' && m.trim());
+
+  return [...new Set(candidates)];
+}
+
 function generateSessionTitle(firstMessage) {
   const now = new Date();
   const dateTime = now.toLocaleString([], {
@@ -95,24 +190,102 @@ async function createAnthropicText({ model, history, message, stream, onChunk })
     messages: toAnthropicMessages(history, message),
   };
 
-  if (stream) {
-    const response = await anthropic.messages.create({ ...payload, stream: true });
-    let full = '';
-    for await (const event of response) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        full += event.delta.text;
-        onChunk(event.delta.text);
+  return withProviderRetry(async () => {
+    if (stream) {
+      const response = await anthropic.messages.create({ ...payload, stream: true });
+      let full = '';
+      for await (const event of response) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          full += event.delta.text;
+          onChunk(event.delta.text);
+        }
       }
+      return full;
     }
-    return full;
+
+    const response = await anthropic.messages.create(payload);
+    return response.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('')
+      .trim();
+  }, 'Anthropic');
+}
+
+async function createGeminiText({ model, history, message, stream, onChunk }) {
+  if (!gemini) {
+    throw new Error('GEMINI_API_KEY is missing. Set it in your environment.');
   }
 
-  const response = await anthropic.messages.create(payload);
-  return response.content
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('')
-    .trim();
+  const payload = {
+    model,
+    messages: toGeminiMessages(history, message),
+  };
+
+  return withProviderRetry(async () => {
+    if (stream) {
+      const response = await gemini.chat.completions.create({ ...payload, stream: true });
+      let full = '';
+      for await (const chunk of response) {
+        const delta = chunk.choices?.[0]?.delta?.content || '';
+        if (delta) {
+          full += delta;
+          onChunk(delta);
+        }
+      }
+      return full;
+    }
+
+    const response = await gemini.chat.completions.create(payload);
+    return (response.choices?.[0]?.message?.content || '').trim();
+  }, 'Gemini');
+}
+
+async function createTextWithProvider({ model, history, message, stream, onChunk }) {
+  if (isGeminiModel(model)) {
+    const fallbackModels = getGeminiFallbackModels(model);
+    let lastError;
+
+    for (const geminiModel of fallbackModels) {
+      try {
+        if (geminiModel !== model) {
+          console.warn(`Primary Gemini model failed. Retrying with fallback model: ${geminiModel}`);
+        }
+
+        return await createGeminiText({
+          model: geminiModel,
+          history,
+          message,
+          stream,
+          onChunk,
+        });
+      } catch (error) {
+        lastError = error;
+        if (!isRetryableProviderError(error)) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  try {
+    return await createAnthropicText({ model, history, message, stream, onChunk });
+  } catch (error) {
+    if (!gemini || !shouldFallbackToGemini(error)) {
+      throw error;
+    }
+
+    console.warn('Anthropic request failed. Falling back to Gemini model:', DEFAULT_GEMINI_MODEL);
+    return createGeminiText({
+      model: DEFAULT_GEMINI_MODEL,
+      history,
+      message,
+      stream,
+      onChunk,
+    });
+  }
 }
 
 app.get('/api/health', (_req, res) => {
@@ -120,7 +293,11 @@ app.get('/api/health', (_req, res) => {
     success: true,
     data: {
       status: 'healthy',
-      provider: 'anthropic',
+      defaultModel: DEFAULT_MODEL,
+      providers: {
+        anthropic: !!anthropic,
+        gemini: !!gemini,
+      },
       timestamp: new Date().toISOString(),
     },
   });
@@ -175,7 +352,7 @@ app.post('/api/chat/:sessionId/chat', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const content = await createAnthropicText({
+      const content = await createTextWithProvider({
         model: state.model,
         history: state.messages,
         message: message.trim(),
@@ -191,7 +368,7 @@ app.post('/api/chat/:sessionId/chat', async (req, res) => {
       return;
     }
 
-    const content = await createAnthropicText({
+    const content = await createTextWithProvider({
       model: state.model,
       history: state.messages,
       message: message.trim(),
@@ -208,7 +385,10 @@ app.post('/api/chat/:sessionId/chat', async (req, res) => {
   } catch (error) {
     state.isProcessing = false;
     sessions.set(sessionId, state);
-    const msg = error instanceof Error ? error.message : 'Failed to process message';
+    let msg = error instanceof Error ? error.message : 'Failed to process message';
+    if (isRetryableProviderError(error)) {
+      msg = 'AI provider is temporarily unavailable (503). Please try again in a few seconds.';
+    }
     console.error('Chat processing error:', msg);
 
     if (stream) {
