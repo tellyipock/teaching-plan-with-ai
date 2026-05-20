@@ -9,9 +9,9 @@
     "dev:web": "vite --host 0.0.0.0 --port 3000",
     "build": "vite build",
     "lint": "eslint --cache -f json --quiet .",
-    "preview": "bun run build && vite preview --host 0.0.0.0 --port 4173",
+    "preview": "npm run build && vite preview --host 0.0.0.0 --port 4173",
     "start": "node server/index.js",
-    "deploy": "bun run build && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
