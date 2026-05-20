@@ -33,18 +33,16 @@ export function Footer() {
                 <Github className="w-4 h-4" />
               </a>
             </div>
-            <Handwriting className="text-sm block">Built by teachers, for teachers</Handwriting>
+            <Handwriting className="text-sm text-brand-orange italic block">Built by teachers, for teachers</Handwriting>
           </div>
         </div>
         <div className="pt-8 border-t border-primary/5 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
             <ShieldCheck className="w-3 h-3" />
-            <p>Note: LinearEd utilizes AI processing. There is a limit on the number of requests that can be made to the AI servers across all user apps in a given time period.</p>
+            <p>Disclaimer: LinearEd utilizes Artificial Intelligence (AI) processing. There is a limit on the number of requests that can be made to the AI servers across all user apps in a given time period. Content may contain inaccuracies.</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>© 2024 LinearEd. Crafted with</span>
-            <Heart className="w-4 h-4 text-red-500 fill-current" />
-            <span>for the modern classroom</span>
+            <span>© 2026 LinearEd. Crafted with <Heart className="w-4 h-4 text-red-500 fill-current" />for the modern classroom</span>
           </div>
         </div>
       </div>

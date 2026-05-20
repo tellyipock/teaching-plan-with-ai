@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Download, Save } from "lucide-react";
+import { Plus, Trash2, Download, Save, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 export interface RubricRow {
   id: string;
@@ -48,9 +48,10 @@ interface EditableRubricProps {
   scale: number;
   onUpdate: (data: RubricRow[]) => void;
   onExport: () => void;
+  onExportCsv?: () => void;
   onSave?: () => void;
 }
-export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: EditableRubricProps) {
+export function EditableRubric({ data, scale, onUpdate, onExport, onExportCsv, onSave }: EditableRubricProps) {
   const handleCellChange = useCallback((rowId: string, type: 'criterion' | number, value: string) => {
     onUpdate(data.map(row => {
       if (row.id === rowId) {
@@ -156,6 +157,14 @@ export function EditableRubric({ data, scale, onUpdate, onExport, onSave }: Edit
           >
             <Download className="w-4 h-4 mr-2" /> Export PDF
           </Button>
+          {onExportCsv && (
+            <Button
+              onClick={onExportCsv}
+              className="bg-primary hover:bg-primary/90 text-white shadow-lg h-11 px-8 font-bold"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+          )}
         </div>
       </div>
     </div>

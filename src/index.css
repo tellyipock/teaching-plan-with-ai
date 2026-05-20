@@ -4,16 +4,17 @@
 @tailwind utilities;
 @layer base {
   :root {
-    --background: 40 30% 98%;
-    --foreground: 224 71% 4%;
-    --primary: 193 87% 43%;
-    --primary-foreground: 0 0% 100%;
-    --muted: 40 20% 94%;
-    --muted-foreground: 220 10% 40%;
-    --border: 24 15% 85%;
-    --input: 24 15% 85%;
-    --ring: 193 87% 43%;
+    --background: 40 30% 98%;        /* #FBF9F5 */
+    --foreground: 224 71% 4%;        /* #03060F */
+    --primary: 193 87% 43%;          /* brand blue #0EA4CE */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --muted: 40 20% 94%;             /* #F1EEE8 */
+    --muted-foreground: 220 10% 40%; /* #5C6473 */
+    --border: 24 15% 85%;            /* #DCD6CF */
+    --input: 24 15% 85%;             /* #DCD6CF */
+    --ring: 193 87% 43%;             /* #0EA4CE */
     --radius: 0.75rem;
+    --brand-orange: 33 93% 54%;      /* #F7941E */
   }
   body {
     @apply bg-background text-foreground;

@@ -8,6 +8,7 @@ import { RubricLibrary } from '@/components/RubricLibrary';
 import { Footer } from '@/components/layout/Footer';
 import { chatService } from '@/lib/chat';
 import { exportRubricToPDF } from '@/lib/pdf-export';
+import { exportRubricToCSV } from '@/lib/csv-export';
 import { useRubricStore, SavedRubric } from '@/lib/store';
 import { Toaster, toast } from 'sonner';
 export function HomePage() {
@@ -114,6 +115,11 @@ export function HomePage() {
       exportRubricToPDF(rubricData, formData);
     }
   }, [formData, rubricData]);
+  const handleExportCsv = useCallback(() => {
+    if (formData) {
+      exportRubricToCSV(rubricData, formData);
+    }
+  }, [formData, rubricData]);
   if (!mounted) return null;
   return (
     <div className="min-h-screen grid-paper flex flex-col transition-opacity duration-500">
@@ -124,14 +130,14 @@ export function HomePage() {
               <div className="bg-primary p-1.5 rounded rotate-3 shadow-sm">
                 <FileText className="text-white w-5 h-5" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">Linear<span className="text-primary">Ed</span></h1>
+              <h1 className="text-2xl text-primary font-bold tracking-tight">Linear<span className="text-brand-orange">Ed</span></h1>
             </div>
             <SketchyUnderline className="h-1" />
           </div>
           <div className="flex items-center gap-4">
             <RubricLibrary onLoad={handleLoad} />
             <div className="hidden lg:block">
-              <Handwriting className="text-sm">Excellence in every expectation</Handwriting>
+              <Handwriting className="text-sm text-brand-orange italic">Excellence in every expectation</Handwriting>
             </div>
           </div>
         </div>
@@ -149,7 +155,7 @@ export function HomePage() {
             >
               <div className="text-center mb-12 space-y-4">
                 <h2 className="text-4xl md:text-5xl font-bold leading-tight">
-                  Design a Rubric in <span className="italic text-primary">Seconds</span>
+                  Design a Rubric in <span className="italic text-brand-orange">Seconds</span>
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
                   Transform assignment prompts into high-quality pedagogical roadmaps for your students.
@@ -216,6 +222,7 @@ export function HomePage() {
                 scale={formData?.scale || 4}
                 onUpdate={setRubricData}
                 onExport={handleExport}
+                onExportCsv={handleExportCsv}
                 onSave={handleSave}
               />
             </motion.div>
